@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Analysis Studio</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;height:100vh;display:flex;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+#sidebar{width:272px;min-width:272px;background:white;color:#1a2a3a;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;font-size:13px;transition:width .2s,min-width .2s;border-right:1px solid #dde3ea;}
+#sidebar.collapsed{width:0;min-width:0;overflow:hidden;}
+#sidebar-title{padding:14px 16px;font-size:14px;font-weight:700;color:#1558a3;background:white;border-bottom:1px solid #dde3ea;letter-spacing:.3px;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.s-sec{border-bottom:1px solid #dde3ea;}
+.s-sec-hdr{padding:9px 16px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:#4a7099;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;}
+.s-sec-hdr:hover{color:#1558a3;}
+.s-sec-body{padding:8px 12px 12px;}
+.s-sec-body.hidden{display:none;}
+.arr{transition:transform .18s;display:inline-block;}
+.arr.open{transform:rotate(90deg);}
+
+/* Upload */
+.upload-zone{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;border:1.5px dashed #bdd0e4;background:#f4f8fb;color:#5a7d99;border-radius:6px;cursor:pointer;font-size:12px;transition:all .15s;}
+.upload-zone:hover{border-color:#1558a3;color:#1558a3;}
+.file-badge{font-size:10.5px;color:#3e6a89;margin-top:5px;line-height:1.4;}
+.btn-sm{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:5px;border:1px solid #bdd0e4;background:#eaf1f8;color:#3e6a89;font-size:11.5px;cursor:pointer;transition:all .15s;}
+.btn-sm:hover{border-color:#1558a3;color:#1558a3;}
+.btn-sm:disabled{opacity:.4;cursor:default;}
+
+/* Column list */
+#col-list{max-height:280px;overflow-y:auto;}
+.col-group-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:6px 4px 3px;color:#4a7099;}
+.col-row{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:4px;cursor:default;}
+.col-row:hover{background:#eaf1f8;}
+.col-name{flex:1;font-size:11.5px;color:#1a2a3a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.col-name.renamed{color:#1558a3;font-style:italic;}
+.type-pill{font-size:9px;padding:1px 5px;border-radius:8px;font-weight:700;text-transform:uppercase;flex-shrink:0;}
+.type-pill.numeric{background:#0a3d2e;color:#3ecbb5;}
+.type-pill.categorical{background:#38104a;color:#c07cf0;}
+.type-pill.metric{background:#0a2a4a;color:#5daadc;}
+.type-pill.variable{background:#2a2010;color:#e0a830;}
+/* rename button — always visible, properly sized */
+.rename-btn{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;font-size:10px;background:#eaf1f8;color:#1558a3;border:1px solid #bdd0e4;border-radius:4px;cursor:pointer;flex-shrink:0;white-space:nowrap;transition:all .12s;}
+.rename-btn:hover{background:#1558a3;color:#fff;border-color:#1558a3;}
+
+/* Filters */
+.filter-chip{display:inline-flex;align-items:center;gap:4px;background:#ddeef8;color:#1558a3;border-radius:10px;padding:2px 8px;font-size:11px;margin:2px;}
+.filter-chip .fx{cursor:pointer;opacity:.6;font-size:9px;}
+.filter-chip .fx:hover{opacity:1;}
+.add-filter-btn{width:100%;padding:5px;background:transparent;border:1px dashed #bdd0e4;color:#5a7d99;border-radius:4px;cursor:pointer;font-size:11px;margin-top:4px;}
+.add-filter-btn:hover:not(:disabled){border-color:#1558a3;color:#1558a3;}
+.add-filter-btn:disabled{opacity:.4;cursor:default;}
+
+/* Chart tabs */
+.ctab{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;color:#6a8da5;font-size:12px;transition:all .12s;margin-bottom:2px;}
+.ctab:hover{background:#eaf1f8;color:#1558a3;}
+.ctab.active{background:#1558a3;color:#fff;font-weight:600;}
+.ctab .ti{font-size:14px;width:18px;text-align:center;}
+
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+#mhdr{background:white;padding:11px 20px;border-bottom:1px solid #dde3ea;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+#mhdr h2{font-size:15px;font-weight:700;color:#1b2b3c;}
+#mhdr .sub{font-size:11.5px;color:#6b7e8d;}
+#mhdr .stats{margin-left:auto;font-size:11.5px;color:#8a9dab;}
+
+#content{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:14px;gap:10px;}
+
+/* Config panel — collapsible */
+#cfg-panel{background:white;border-radius:8px;border:1px solid #dde3ea;flex-shrink:0;}
+#cfg-panel-hdr{display:flex;align-items:center;padding:9px 14px;border-bottom:1px solid #dde3ea;cursor:pointer;user-select:none;}
+#cfg-panel-hdr:hover{background:#f7fafc;}
+#cfg-panel-hdr span{font-size:11px;font-weight:700;color:#6b7e8d;text-transform:uppercase;letter-spacing:.6px;flex:1;}
+#cfg-toggle{font-size:11px;color:#8a9dab;background:#eef2f6;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;transition:all .12s;}
+#cfg-toggle:hover{background:#dde5ef;color:#1558a3;}
+#cfg-body{padding:14px 16px;}
+.cfg-title{font-size:13px;font-weight:700;color:#1b2b3c;margin-bottom:11px;}
+.cfg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:9px;}
+.cfg-g{}
+.cfg-lbl{font-size:10.5px;font-weight:600;color:#6b7e8d;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+.cfg-sel,.cfg-inp{width:100%;padding:5px 7px;border:1px solid #ccd5dd;background:#f7fafc;color:#1b2b3c;border-radius:5px;font-size:12px;outline:none;}
+.cfg-sel:focus,.cfg-inp:focus{border-color:#1558a3;background:white;}
+.multi-sel{height:100px;}
+.cfg-chk{display:flex;align-items:center;gap:6px;margin:4px 0;}
+.cfg-chk label{font-size:12px;color:#3a4e5e;cursor:pointer;}
+input[type=checkbox]{accent-color:#1558a3;width:13px;height:13px;cursor:pointer;}
+
+.btn-gen{display:inline-flex;align-items:center;gap:6px;padding:7px 18px;background:#1558a3;color:white;border:none;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer;transition:background .12s;margin-top:11px;}
+.btn-gen:hover{background:#1047859;}
+.btn-sec{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#eaf1f8;color:#1558a3;border:1px solid #bdd0e4;border-radius:5px;font-size:11.5px;font-weight:600;cursor:pointer;transition:all .12s;}
+.btn-sec:hover{background:#d6e8f5;}
+.btn-sec:disabled{opacity:.4;cursor:default;}
+
+/* Chart panel */
+#chart-panel{flex:1;background:white;border-radius:8px;border:1px solid #dde3ea;overflow:hidden;display:flex;flex-direction:column;min-height:300px;}
+#chart-placeholder{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#8a9dab;gap:8px;}
+#chart-placeholder .ph-ico{font-size:52px;}
+#chart-placeholder p{font-size:13px;}
+#chart-placeholder .ph2{font-size:11px;color:#b0c0cc;}
+/* chart title bar (used for charts that can't hold a Plotly title) */
+#chart-title-bar{display:none;text-align:center;font-size:13px;font-weight:600;color:#1a1a1a;padding:10px 0 4px;flex-shrink:0;}
+/* chart-inner holds the scaled chart + optional corr legend */
+#chart-inner{flex:1;display:flex;flex-direction:row;align-items:flex-start;overflow:hidden;position:relative;}
+/* plotly-out: fixed px size, CSS-scaled to fit */
+#plotly-out{flex-shrink:0;display:none;transform-origin:top left;}
+#corr-legend{display:none;flex-direction:column;justify-content:center;padding:16px 18px 16px 4px;gap:3px;min-width:160px;max-width:240px;overflow-y:auto;font-size:11.5px;font-family:system-ui,sans-serif;color:#222;}
+#corr-legend .cl-row{white-space:nowrap;}
+#corr-legend .cl-key{font-weight:700;color:#1a5f9e;margin-right:4px;}
+
+/* Preview */
+#preview-area{display:none;background:white;border-radius:8px;border:1px solid #dde3ea;flex-shrink:0;}
+#preview-area.open{display:block;}
+.prev-wrap{max-height:190px;overflow:auto;}
+.prev-tbl{width:100%;border-collapse:collapse;font-size:11px;}
+.prev-tbl th{background:#f2f6fa;color:#6b7e8d;font-weight:600;padding:4px 8px;text-align:left;border-bottom:1px solid #dde3ea;position:sticky;top:0;}
+.prev-tbl td{padding:3px 8px;border-bottom:1px solid #f0f4f8;color:#1b2b3c;white-space:nowrap;}
+
+/* ── MODALS ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.46);display:none;align-items:center;justify-content:center;z-index:200;}
+.modal-bg.open{display:flex;}
+.modal-box{background:white;border-radius:10px;padding:22px;width:420px;max-width:92vw;box-shadow:0 8px 40px rgba(0,0,0,.22);}
+.modal-box h3{font-size:14px;font-weight:700;color:#1b2b3c;margin-bottom:14px;}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+.m-btn{padding:7px 16px;border-radius:5px;border:none;font-size:12.5px;cursor:pointer;font-weight:600;}
+.m-btn.primary{background:#1558a3;color:white;}
+.m-btn.primary:hover{background:#1047859;}
+.m-btn.cancel{background:#e8eff6;color:#6b7e8d;}
+.m-form-row{margin-bottom:10px;}
+.m-form-row label{display:block;font-size:11px;font-weight:600;color:#6b7e8d;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+.m-form-row input,.m-form-row select{width:100%;padding:7px 9px;border:1px solid #ccd5dd;border-radius:5px;font-size:13px;outline:none;background:#f7fafc;color:#1b2b3c;}
+.m-form-row input:focus,.m-form-row select:focus{border-color:#1558a3;background:white;}
+.m-row-inline{display:flex;gap:8px;}
+.m-row-inline>*{flex:1;}
+
+/* Toast */
+#toast{position:fixed;bottom:18px;right:18px;background:#1b2b3c;color:white;padding:9px 15px;border-radius:6px;font-size:12.5px;z-index:300;opacity:0;transition:opacity .25s;pointer-events:none;}
+#toast.show{opacity:1;}
+
+/* Scrollbars */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#2d4c67;border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+<div id="sidebar">
+  <div id="sidebar-title">📊 Data Analysis Studio</div>
+
+  <!-- DATA -->
+  <div class="s-sec">
+    <div class="s-sec-hdr" onclick="toggleSec('ds-data','arr-data')">
+      <span>Data</span><span class="arr open" id="arr-data">▶</span>
+    </div>
+    <div class="s-sec-body" id="ds-data">
+      <label class="upload-zone" for="file-inp">📁 Import CSV or Excel</label>
+      <input type="file" id="file-inp" accept=".csv,.xlsx,.xls" style="display:none">
+      <div class="file-badge" id="file-badge">No file loaded</div>
+      <div id="sheet-row" style="display:none;margin-top:6px;">
+        <div class="cfg-lbl" style="color:#4a7099;">Sheet</div>
+        <select class="cfg-sel" id="sheet-sel" style="background:white;color:#1a2a3a;border-color:#bdd0e4;"></select>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px;">
+        <button class="btn-sm" id="preview-btn" onclick="togglePreview()" disabled>Preview</button>
+        <button class="btn-sm" id="clear-btn" onclick="clearData()" disabled>Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLUMNS -->
+  <div class="s-sec">
+    <div class="s-sec-hdr" onclick="toggleSec('ds-cols','arr-cols')">
+      <span>Columns <span id="col-count" style="font-size:10px;color:#4a7099;"></span></span>
+      <span class="arr" id="arr-cols">▶</span>
+    </div>
+    <div class="s-sec-body hidden" id="ds-cols">
+      <div id="col-list"><div style="font-size:11px;color:#4a7099;">Load a file to see columns</div></div>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="s-sec">
+    <div class="s-sec-hdr" onclick="toggleSec('ds-filt','arr-filt')">
+      <span>Filters <span id="filt-count" style="font-size:10px;color:#4a7099;"></span></span>
+      <span class="arr" id="arr-filt">▶</span>
+    </div>
+    <div class="s-sec-body hidden" id="ds-filt">
+      <div id="filt-chips"></div>
+      <button class="add-filter-btn" id="add-filt-btn" onclick="openFilterModal(null)" disabled>+ Add filter</button>
+
+      <!-- ── RANGE ANALYSIS ── -->
+      <div style="margin-top:10px;border-top:1px solid #dde3ea;padding-top:10px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#4a7099;margin-bottom:7px;">📊 Range Analysis</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div>
+            <div class="cfg-lbl" style="color:#4a7099;margin-bottom:2px;">Metric</div>
+            <select class="cfg-sel" id="rf-metric" style="background:white;color:#1a2a3a;border-color:#bdd0e4;font-size:11.5px;padding:4px 6px;"></select>
+          </div>
+          <div style="display:flex;gap:5px;align-items:flex-end;">
+            <div style="flex:1;">
+              <div class="cfg-lbl" style="color:#4a7099;margin-bottom:2px;">Condition</div>
+              <select class="cfg-sel" id="rf-op" onchange="rfOpChange()" style="background:white;color:#1a2a3a;border-color:#bdd0e4;font-size:11px;padding:4px 5px;">
+                <option value="none">(all)</option>
+                <option value="gt">&gt;</option><option value="gte">≥</option>
+                <option value="lt">&lt;</option><option value="lte">≤</option>
+                <option value="eq">= ±tol</option><option value="between">between</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <div class="cfg-lbl" style="color:#4a7099;margin-bottom:2px;">Value A</div>
+              <input type="number" id="rf-va" value="0" style="width:100%;padding:4px 5px;background:white;color:#1a2a3a;border:1px solid #bdd0e4;border-radius:4px;font-size:11px;">
+            </div>
+          </div>
+          <div style="display:flex;gap:5px;" id="rf-extra-row">
+            <div style="flex:1;" id="rf-vb-w" hidden>
+              <div class="cfg-lbl" style="color:#4a7099;margin-bottom:2px;">Value B</div>
+              <input type="number" id="rf-vb" value="0" style="width:100%;padding:4px 5px;background:white;color:#1a2a3a;border:1px solid #bdd0e4;border-radius:4px;font-size:11px;">
+            </div>
+            <div style="flex:1;" id="rf-tol-w" hidden>
+              <div class="cfg-lbl" style="color:#4a7099;margin-bottom:2px;">± Tol</div>
+              <input type="number" id="rf-tol" value="0.5" style="width:100%;padding:4px 5px;background:white;color:#1a2a3a;border:1px solid #bdd0e4;border-radius:4px;font-size:11px;">
+            </div>
+          </div>
+          <div>
+            <div class="cfg-lbl" style="color:#4a7099;margin-bottom:2px;">Variables to compare</div>
+            <select id="rf-vars" multiple style="width:100%;height:72px;background:white;color:#1a2a3a;border:1px solid #bdd0e4;border-radius:4px;font-size:11px;padding:2px;"></select>
+          </div>
+          <div style="display:flex;gap:5px;align-items:flex-end;">
+            <div style="flex:1;">
+              <div class="cfg-lbl" style="color:#4a7099;margin-bottom:2px;">Chart</div>
+              <select id="rf-chart" style="width:100%;padding:4px 5px;background:white;color:#1a2a3a;border:1px solid #bdd0e4;border-radius:4px;font-size:11px;">
+                <option value="box">Box</option><option value="violin">Violin</option><option value="hist">Histogram</option>
+              </select>
+            </div>
+            <button onclick="runRangeFilter()" id="rf-btn" disabled
+              style="flex:1;padding:5px 8px;background:#1558a3;color:white;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+              ▶ Analyze
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART TYPE -->
+  <div class="s-sec" style="border-bottom:none;flex:1;">
+    <div class="s-sec-hdr" onclick="toggleSec('ds-charts','arr-charts')">
+      <span>Chart Type</span><span class="arr open" id="arr-charts">▶</span>
+    </div>
+    <div class="s-sec-body" id="ds-charts">
+      <div class="ctab active" onclick="selectChart('scatter2d')" id="ctab-scatter2d"><span class="ti">📊</span>2D Scatter</div>
+      <div class="ctab" onclick="selectChart('scatter3d')" id="ctab-scatter3d"><span class="ti">🧊</span>3D Scatter</div>
+      <div class="ctab" onclick="selectChart('corr')" id="ctab-corr"><span class="ti">🔗</span>Correlation Matrix</div>
+      <div class="ctab" onclick="selectChart('kde')" id="ctab-kde"><span class="ti">〰️</span>KDE Density</div>
+      <div class="ctab" onclick="selectChart('single')" id="ctab-single"><span class="ti">📦</span>Single Metric</div>
+      <div class="ctab" onclick="selectChart('line')" id="ctab-line"><span class="ti">📈</span>Line Plot</div>
+      <div class="ctab" onclick="selectChart('parcoords')" id="ctab-parcoords"><span class="ti">⊟</span>Parallel Coords</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+<div id="main">
+  <div id="mhdr">
+    <button id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle sidebar (S)"
+      style="flex-shrink:0;background:#f0f4f8;border:1px solid #d0dae4;border-radius:5px;padding:5px 9px;cursor:pointer;font-size:13px;color:#6b7e8d;transition:all .15s;"
+      onmouseover="this.style.background='#dde8f2'" onmouseout="this.style.background='#f0f4f8'">◀</button>
+    <div>
+      <h2 id="mhdr-title">2D Scatter Plot</h2>
+      <div class="sub" id="mhdr-sub">Load a file, then select axes and generate</div>
+    </div>
+    <div class="stats" id="mhdr-stats"></div>
+  </div>
+
+  <div id="content">
+
+    <!-- ── CONFIG PANEL ── -->
+    <div id="cfg-panel">
+      <div id="cfg-panel-hdr" onclick="toggleCfg()">
+        <span id="cfg-panel-label">Configure 2D Scatter</span>
+        <div style="display:flex;align-items:center;gap:12px;margin-left:auto;margin-right:8px;" onclick="event.stopPropagation()">
+          <div style="display:flex;align-items:center;gap:5px;">
+            <label style="font-size:10.5px;font-weight:600;color:#6b7e8d;white-space:nowrap;">Título / ejes</label>
+            <input type="number" id="chart-fontsize" value="12" min="8" max="28" step="1"
+              style="width:48px;padding:2px 5px;border:1px solid #dde3ea;border-radius:4px;font-size:11px;color:#1a2a3a;background:white;"
+              title="Tamaño del título y etiquetas de ejes">
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <label style="font-size:10.5px;font-weight:600;color:#6b7e8d;white-space:nowrap;">Ticks / valores</label>
+            <input type="number" id="chart-ticksize" value="10" min="6" max="22" step="1"
+              style="width:48px;padding:2px 5px;border:1px solid #dde3ea;border-radius:4px;font-size:11px;color:#1a2a3a;background:white;"
+              title="Tamaño de los números en los ejes, valores dentro de la matriz de correlación y etiquetas del parallel coordinates">
+          </div>
+        </div>
+        <button id="cfg-toggle">▲ Hide config</button>
+      </div>
+      <div id="cfg-body">
+
+      <!-- 2D SCATTER -->
+      <div id="cfg-scatter2d">
+        <div class="cfg-grid">
+          <div class="cfg-g"><div class="cfg-lbl">X Axis *</div><select class="cfg-sel" id="s2-x"></select></div>
+          <div class="cfg-g"><div class="cfg-lbl">Y Axis *</div><select class="cfg-sel" id="s2-y"></select></div>
+          <div class="cfg-g"><div class="cfg-lbl">Color (hue)</div><select class="cfg-sel" id="s2-hue"></select></div>
+          <div class="cfg-g"><div class="cfg-lbl">Size</div><select class="cfg-sel" id="s2-size"></select></div>
+          <div class="cfg-g"><div class="cfg-lbl">Marker shape</div><select class="cfg-sel" id="s2-sym"></select></div>
+          <div class="cfg-g">
+            <div class="cfg-lbl">Color palette</div>
+            <select class="cfg-sel" id="s2-pal">
+              <option value="tab10">Tab10</option><option value="viridis">Viridis</option>
+              <option value="plasma">Plasma</option><option value="set2">Set2</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-gen" onclick="generateChart()">▶ Generate Chart</button>
+      </div>
+
+      <!-- 3D SCATTER -->
+      <div id="cfg-scatter3d" style="display:none">
+        <div class="cfg-grid">
+          <div class="cfg-g"><div class="cfg-lbl">X Axis *</div><select class="cfg-sel" id="s3-x"></select></div>
+          <div class="cfg-g"><div class="cfg-lbl">Y Axis *</div><select class="cfg-sel" id="s3-y"></select></div>
+          <div class="cfg-g"><div class="cfg-lbl">Z Axis *</div><select class="cfg-sel" id="s3-z"></select></div>
+          <div class="cfg-g"><div class="cfg-lbl">Color (hue)</div><select class="cfg-sel" id="s3-hue"></select></div>
+          <div class="cfg-g"><div class="cfg-lbl">Size</div><select class="cfg-sel" id="s3-size"></select></div>
+          <div class="cfg-g">
+            <div class="cfg-lbl">Color scale</div>
+            <select class="cfg-sel" id="s3-cmap"><option>Viridis</option><option>Plasma</option><option>RdBu</option><option>Turbo</option></select>
+          </div>
+        </div>
+        <button class="btn-gen" onclick="generateChart()">▶ Generate Chart</button>
+      </div>
+
+      <!-- CORRELATION MATRIX -->
+      <div id="cfg-corr" style="display:none">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:170px;">
+            <div class="cfg-lbl">Columns (Ctrl+click multi-select)</div>
+            <select class="cfg-sel multi-sel" id="corr-cols" multiple></select>
+          </div>
+          <div style="flex:1;min-width:155px;display:flex;flex-direction:column;gap:7px;">
+            <div class="cfg-g"><div class="cfg-lbl">Color map</div>
+              <select class="cfg-sel" id="corr-cmap">
+                <option value="RdBu_r">RdBu ↑red (divergent)</option>
+                <option value="RdBu">RdBu ↑blue (divergent)</option>
+                <option value="RdYlGn_r">RdYlGn ↑green</option>
+                <option value="Viridis">Viridis</option>
+                <option value="Plasma">Plasma</option>
+              </select>
+            </div>
+            <div class="cfg-g"><div class="cfg-lbl">Show</div>
+              <select class="cfg-sel" id="corr-tri"><option value="lower">Lower triangle</option><option value="full">Full matrix</option></select>
+            </div>
+            <div class="cfg-chk"><input type="checkbox" id="corr-annot" checked><label for="corr-annot">Show correlation values</label></div>
+            <div class="cfg-chk"><input type="checkbox" id="corr-short" checked><label for="corr-short">Short axis labels (A, B…)</label></div>
+          </div>
+        </div>
+        <button class="btn-gen" onclick="generateChart()">▶ Generate Chart</button>
+      </div>
+
+      <!-- KDE DENSITY -->
+      <div id="cfg-kde" style="display:none">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:170px;">
+            <div class="cfg-lbl">Metrics / OUT columns (multi-select)</div>
+            <select class="cfg-sel multi-sel" id="kde-metrics" multiple style="height:110px;"></select>
+          </div>
+          <div style="flex:1;min-width:155px;display:flex;flex-direction:column;gap:7px;">
+            <div class="cfg-g"><div class="cfg-lbl">Color variable (IN)</div><select class="cfg-sel" id="kde-cvar"></select></div>
+            <div class="cfg-g"><div class="cfg-lbl">Columns per row</div><input type="number" class="cfg-inp" id="kde-ncols" value="3" min="1" max="6"></div>
+            <div class="cfg-g"><div class="cfg-lbl">Max categories</div><input type="number" class="cfg-inp" id="kde-maxcat" value="10" min="2" max="30"></div>
+          </div>
+        </div>
+        <button class="btn-gen" onclick="generateChart()">▶ Generate Chart</button>
+      </div>
+
+      <!-- SINGLE METRIC -->
+      <div id="cfg-single" style="display:none">
+        <div class="cfg-grid">
+          <div class="cfg-g"><div class="cfg-lbl">Metric (OUT) *</div><select class="cfg-sel" id="sm-metric"></select></div>
+          <div class="cfg-g"><div class="cfg-lbl">Group by (IN)</div><select class="cfg-sel" id="sm-group"></select></div>
+          <div class="cfg-g">
+            <div class="cfg-lbl">Chart type</div>
+            <select class="cfg-sel" id="sm-type">
+              <option value="box">Box plot</option><option value="violin">Violin</option>
+              <option value="strip">Strip (jitter)</option><option value="bar">Bar (mean ± SD)</option>
+              <option value="ecdf">ECDF</option>
+            </select>
+          </div>
+          <div class="cfg-g">
+            <div class="cfg-lbl">Orientation</div>
+            <select class="cfg-sel" id="sm-orient"><option value="v">Vertical</option><option value="h">Horizontal</option></select>
+          </div>
+          <div class="cfg-g">
+            <div class="cfg-lbl">Color palette</div>
+            <select class="cfg-sel" id="sm-pal"><option value="tab10">Tab10</option><option value="set2">Set2</option><option value="pastel">Pastel</option></select>
+          </div>
+        </div>
+        <button class="btn-gen" onclick="generateChart()">▶ Generate Chart</button>
+      </div>
+
+      <!-- LINE PLOT -->
+      <div id="cfg-line" style="display:none">
+        <div class="cfg-grid">
+          <div class="cfg-g"><div class="cfg-lbl">X Axis *</div><select class="cfg-sel" id="lp-x"></select></div>
+          <div class="cfg-g"><div class="cfg-lbl">Y Axis *</div><select class="cfg-sel" id="lp-y"></select></div>
+          <div class="cfg-g"><div class="cfg-lbl">Color (hue)</div><select class="cfg-sel" id="lp-hue"></select></div>
+          <div class="cfg-g">
+            <div class="cfg-lbl">Line style</div>
+            <select class="cfg-sel" id="lp-ls"><option value="solid">Solid</option><option value="dash">Dashed</option><option value="dot">Dotted</option><option value="dashdot">Dash-dot</option></select>
+          </div>
+          <div class="cfg-g">
+            <div class="cfg-lbl">Marker</div>
+            <select class="cfg-sel" id="lp-mk"><option value="circle">Circle</option><option value="square">Square</option><option value="diamond">Diamond</option><option value="none">None</option></select>
+          </div>
+        </div>
+        <button class="btn-gen" onclick="generateChart()">▶ Generate Chart</button>
+      </div>
+
+      <!-- PARALLEL COORDS -->
+      <div id="cfg-parcoords" style="display:none">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:170px;">
+            <div class="cfg-lbl">Axes (multi-select)</div>
+            <select class="cfg-sel multi-sel" id="pc-axes" multiple></select>
+          </div>
+          <div style="flex:1;min-width:155px;display:flex;flex-direction:column;gap:7px;">
+            <div class="cfg-g"><div class="cfg-lbl">Color by</div><select class="cfg-sel" id="pc-color"></select></div>
+            <div class="cfg-g">
+              <div class="cfg-lbl">Color scale</div>
+              <select class="cfg-sel" id="pc-cmap"><option>Viridis</option><option>Plasma</option><option>RdBu</option><option>Turbo</option></select>
+            </div>
+            <div class="cfg-chk"><input type="checkbox" id="pc-norm"><label for="pc-norm">Normalize axes (0 – 1)</label></div>
+          </div>
+        </div>
+        <button class="btn-gen" onclick="generateChart()">▶ Generate Chart</button>
+      </div>
+
+
+      </div><!-- end cfg-body -->
+    </div><!-- end cfg-panel -->
+
+    <!-- ── CHART OUTPUT ── -->
+    <div id="chart-panel">
+      <div id="chart-title-bar"></div>
+      <div id="chart-placeholder">
+        <div class="ph-ico">📊</div>
+        <p>Load a file and press "Generate Chart"</p>
+        <p class="ph2">Supports CSV and Excel (.xlsx) · Columns with in: / out: prefixes are auto-detected</p>
+      </div>
+      <div id="chart-inner">
+        <div id="plotly-out"></div>
+        <div id="corr-legend"></div>
+      </div>
+    </div>
+
+    <!-- DATA PREVIEW -->
+    <div id="preview-area">
+      <div class="prev-wrap"><table class="prev-tbl" id="prev-tbl"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ RENAME MODAL ═══════════════ -->
+<div class="modal-bg" id="rename-modal">
+  <div class="modal-box">
+    <h3>Rename column</h3>
+    <div class="m-form-row">
+      <label id="rename-orig"></label>
+      <input type="text" id="rename-inp" placeholder="New display name">
+    </div>
+    <div class="modal-btns">
+      <button class="m-btn cancel" onclick="closeRenameModal()">Cancel</button>
+      <button class="m-btn primary" onclick="applyRename()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ FILTER MODAL ═══════════════ -->
+<div class="modal-bg" id="filter-modal">
+  <div class="modal-box">
+    <h3 id="fm-title">Add Filter</h3>
+    <div class="m-form-row"><label>Column</label><select id="fm-col" onchange="fmColChange()"></select></div>
+    <div class="m-form-row">
+      <label>Condition</label>
+      <select id="fm-op" onchange="fmOpChange()">
+        <option value="none">(no filter / show all)</option>
+        <option value="gt">&gt; greater than</option><option value="gte">&gt;= greater or equal</option>
+        <option value="lt">&lt; less than</option><option value="lte">&lt;= less or equal</option>
+        <option value="eq">= equal (± tolerance)</option><option value="between">between [A, B]</option>
+        <option value="contains">contains (text)</option><option value="exactly">exactly equals (text)</option>
+      </select>
+    </div>
+    <div id="fm-num-rows">
+      <div class="m-row-inline">
+        <div class="m-form-row"><label>Value A</label><input type="number" id="fm-va" value="0"></div>
+        <div class="m-form-row" id="fm-vb-w" hidden><label>Value B</label><input type="number" id="fm-vb" value="0"></div>
+        <div class="m-form-row" id="fm-tol-w" hidden><label>± Tolerance</label><input type="number" id="fm-tol" value="0.5" step="0.1"></div>
+      </div>
+    </div>
+    <div id="fm-str-row" class="m-form-row" hidden>
+      <label>Text value</label><input type="text" id="fm-str" placeholder="Enter text...">
+    </div>
+    <div class="modal-btns">
+      <button class="m-btn cancel" onclick="closeFilterModal()">Cancel</button>
+      <button class="m-btn primary" onclick="applyFilter()">Apply Filter</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ═══════════════════════════ SCRIPT ═══════════════════════════ -->
+<script>
+// ═══════════════════════ STATE ═══════════════════════
+const S = {
+  rawData:[], columns:[], types:{},
+  renameMap:{}, filters:[],
+  metrics:[], variables:[],   // out: / in: columns (original names)
+  currentChart:'scatter2d',
+  wb:null, fileName:'',
+  editingFilterIdx:null,
+};
+
+// ═══════════════════════ UTILS ═══════════════════════
+const toast = (msg,ms=2400) => {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),ms);
+};
+const dn = col => S.renameMap[col]||col;
+const numCols = () => S.columns.filter(c=>S.types[c]==='numeric');
+const allCols = () => S.columns;
+
+function toNum(v){
+  if(typeof v==='number') return v;
+  if(v===null||v===undefined||v==='') return NaN;
+  return Number(String(v).replace(/\s/g,'').replace(',','.'));
+}
+
+function getFiltered(){
+  let d=S.rawData;
+  for(const f of S.filters){
+    d=d.filter(r=>{
+      const v=r[f.col]; const n=toNum(v);
+      if(f.op==='none') return true;
+      if(f.op==='gt') return n>f.a;
+      if(f.op==='gte') return n>=f.a;
+      if(f.op==='lt') return n<f.a;
+      if(f.op==='lte') return n<=f.a;
+      if(f.op==='eq') return !isNaN(n)&&Math.abs(n-f.a)<=(f.tol??0.5);
+      if(f.op==='between') return n>=f.a&&n<=f.b;
+      if(f.op==='contains') return String(v??'').toLowerCase().includes(f.str.toLowerCase());
+      if(f.op==='exactly') return String(v??'')===f.str;
+      return true;
+    });
+  }
+  return d;
+}
+
+// Palettes matching notebook (tab10 = seaborn default)
+const PAL = {
+  tab10: ['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'],
+  set2:  ['#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854','#ffd92f','#e5c494','#b3b3b3'],
+  pastel:['#aec6cf','#ffd1dc','#b5ead7','#ffdac1','#e2f0cb','#c7ceea','#f0e6ef','#ffe4e1'],
+};
+function palette(name,n){
+  const p=PAL[name]||PAL.tab10;
+  return Array.from({length:n},(_,i)=>p[i%p.length]);
+}
+
+// ─── Seaborn "ticks" style base layout ───
+// White background, no gridlines, visible axis spines + ticks (like sns.set_theme(style='ticks'))
+function chartFS(){return Math.max(8,+(document.getElementById('chart-fontsize')?.value||12));}
+function chartTS(){return Math.max(6,+(document.getElementById('chart-ticksize')?.value||10));}
+function BL(title=''){
+  const fs=chartFS(), ts=chartTS();
+  const ax={
+    showgrid:false, zeroline:false,
+    showline:true, linecolor:'#333', linewidth:1.5,
+    ticks:'outside', ticklen:5, tickwidth:1.2, tickcolor:'#333',
+    tickfont:{size:ts,color:'#222',family:'system-ui,sans-serif'},
+    showspikes:false,
+  };
+  return {
+    title:{text:title,font:{size:fs,color:'#1a1a1a',family:'system-ui,sans-serif'},x:0.5,xanchor:'center'},
+    paper_bgcolor:'white', plot_bgcolor:'white',
+    font:{family:'system-ui,sans-serif',size:12,color:'#222'},
+    margin:{l:72,r:30,t:58,b:72},
+    xaxis:{...ax}, yaxis:{...ax},
+  };
+}
+// Axis with label
+function AX(title,extra={}){
+  const fs=chartFS(), ts=chartTS();
+  return{showgrid:false,zeroline:false,showline:true,linecolor:'#333',linewidth:1.5,
+    ticks:'outside',ticklen:5,tickwidth:1.2,tickcolor:'#333',
+    tickfont:{size:ts,color:'#222'},
+    title:{text:title,font:{size:fs,color:'#222'}},
+    ...extra};
+}
+
+// ═══════════════════════ FILE LOADING ═══════════════════════
+document.getElementById('file-inp').addEventListener('change',function(e){
+  const f=e.target.files[0]; if(!f) return;
+  S.fileName=f.name;
+  if(f.name.match(/\.csv$/i)){
+    Papa.parse(f,{
+      header:true, dynamicTyping:true, skipEmptyLines:true,
+      worker:false,  // avoid HTTP worker issues
+      // normalize all line-ending variants (\r\n, \r) to \n before parsing
+      beforeFirstChunk: chunk => chunk.replace(/\r\n/g,'\n').replace(/\r/g,'\n'),
+      complete:r=>{
+        const clean=r.data.map(row=>{
+          const o={...row};
+          delete o.__parsed_extra;
+          // PapaParse converts 'False'/'True' to booleans; restore as strings so filters work
+          for(const k of Object.keys(o)){
+            if(o[k]===true) o[k]='True';
+            else if(o[k]===false) o[k]='False';
+          }
+          return o;
+        });
+        onData(clean,f.name);
+      }});
+  } else {
+    const rd=new FileReader();
+    rd.onload=ev=>{
+      S.wb=XLSX.read(ev.target.result,{type:'array'});
+      const names=S.wb.SheetNames;
+      const sel=document.getElementById('sheet-sel');
+      sel.innerHTML=names.map(s=>`<option>${s}</option>`).join('');
+      document.getElementById('sheet-row').style.display='block';
+      loadSheet(names[0],f.name);
+    };
+    rd.readAsArrayBuffer(f);
+  }
+  this.value='';
+});
+
+document.getElementById('sheet-sel').addEventListener('change',function(){
+  loadSheet(this.value,S.fileName);
+});
+
+function loadSheet(name,fname){
+  const ws=S.wb.Sheets[name];
+  const data=XLSX.utils.sheet_to_json(ws,{defval:null});
+  onData(data,fname);
+}
+
+function onData(data,fname){
+  if(!data||!data.length){toast('⚠️ No data found');return;}
+  S.rawData=data; S.filters=[];
+
+  // ── Detect in:/out: prefixes, auto-rename, build metrics/variables lists ──
+  const rawCols=Object.keys(data[0]);
+  S.columns=rawCols;
+  S.renameMap={};
+  S.metrics=[]; S.variables=[];
+
+  for(const col of rawCols){
+    const lo=col.toLowerCase().trimStart();
+    if(lo.startsWith('out:')){
+      S.metrics.push(col);
+      S.renameMap[col]=col.replace(/^out:\s*/i,'').replace(/:/g,'').trim();
+    } else if(lo.startsWith('in:')){
+      S.variables.push(col);
+      S.renameMap[col]=col.replace(/^in:\s*/i,'').replace(/:/g,'').trim();
+    }
+  }
+
+  // Detect numeric types
+  S.types={};
+  for(const c of rawCols){
+    const vals=data.map(r=>r[c]).filter(v=>v!==null&&v!==undefined&&v!=='');
+    const nNum=vals.filter(v=>typeof v==='number'||(typeof v==='string'&&!isNaN(Number(v.replace(',','.'))))).length;
+    S.types[c]=vals.length>0&&nNum/vals.length>0.7?'numeric':'categorical';
+  }
+
+  const hasPrefix=S.metrics.length>0||S.variables.length>0;
+  document.getElementById('file-badge').textContent=
+    `${fname} — ${data.length.toLocaleString()} rows × rawCols.length cols`
+    .replace('rawCols.length',rawCols.length)
+    +(hasPrefix?`\n↳ ${S.metrics.length} metrics (out:) · ${S.variables.length} variables (in:)`:'');
+  document.getElementById('mhdr-stats').textContent=
+    `${data.length.toLocaleString()} rows · ${rawCols.length} cols`
+    +(hasPrefix?` · ${S.metrics.length} OUT / ${S.variables.length} IN`:'');
+  document.getElementById('col-count').textContent=`(${rawCols.length})`;
+  document.getElementById('preview-btn').disabled=false;
+  document.getElementById('clear-btn').disabled=false;
+  document.getElementById('add-filt-btn').disabled=false;
+
+  renderColList(); updateAllDropdowns(); renderFilterChips();
+  toast(`✓ Loaded ${data.length.toLocaleString()} rows`+(hasPrefix?` — ${S.metrics.length} OUT, ${S.variables.length} IN`:''));
+}
+
+function clearData(){
+  Object.assign(S,{rawData:[],columns:[],types:{},renameMap:{},filters:[],metrics:[],variables:[]});
+  document.getElementById('file-badge').textContent='No file loaded';
+  document.getElementById('mhdr-stats').textContent='';
+  document.getElementById('col-count').textContent='';
+  document.getElementById('col-list').innerHTML='<div style="font-size:11px;color:#3e6a89;">Load a file to see columns</div>';
+  document.getElementById('filt-chips').innerHTML='';
+  document.getElementById('preview-btn').disabled=true;
+  document.getElementById('clear-btn').disabled=true;
+  document.getElementById('add-filt-btn').disabled=true;
+  document.getElementById('sheet-row').style.display='none';
+  document.getElementById('chart-placeholder').style.display='flex';
+  document.getElementById('plotly-out').style.display='none';
+  document.getElementById('preview-area').classList.remove('open');
+}
+
+// ═══════════════════════ COLUMN LIST ═══════════════════════
+function renderColList(){
+  const hasGroups = S.metrics.length>0||S.variables.length>0;
+
+  if(hasGroups){
+    // Show grouped: METRICS (out:) then VARIABLES (in:) then others
+    const others=S.columns.filter(c=>!S.metrics.includes(c)&&!S.variables.includes(c));
+    let html='';
+    if(S.metrics.length){
+      html+=`<div class="col-group-label">📤 Metrics (out:)</div>`;
+      html+=S.metrics.map(c=>colRow(c,'metric')).join('');
+    }
+    if(S.variables.length){
+      html+=`<div class="col-group-label">📥 Variables (in:)</div>`;
+      html+=S.variables.map(c=>colRow(c,'variable')).join('');
+    }
+    if(others.length){
+      html+=`<div class="col-group-label">Other</div>`;
+      html+=others.map(c=>colRow(c,S.types[c])).join('');
+    }
+    document.getElementById('col-list').innerHTML=html;
+  } else {
+    document.getElementById('col-list').innerHTML=S.columns.map(c=>colRow(c,S.types[c])).join('');
+  }
+}
+
+function colRow(c,badge){
+  const disp=dn(c); const renamed=disp!==c;
+  const badgeClass={'metric':'metric','variable':'variable','numeric':'numeric','categorical':'categorical'}[badge]||'numeric';
+  const badgeLabel={'metric':'OUT','variable':'IN','numeric':'num','categorical':'cat'}[badge]||badge;
+  const escapedC=c.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  return `<div class="col-row">
+    <span class="col-name ${renamed?'renamed':''}" title="${c}">${disp}</span>
+    <span class="type-pill ${badgeClass}">${badgeLabel}</span>
+    <button class="rename-btn" onclick="openRenameModal('${escapedC}')">✏ rename</button>
+  </div>`;
+}
+
+// ═══════════════════════ RENAME MODAL ═══════════════════════
+let renamingCol=null;
+function openRenameModal(col){
+  renamingCol=col;
+  document.getElementById('rename-orig').textContent=`Original: ${col}`;
+  document.getElementById('rename-inp').value=S.renameMap[col]||col;
+  document.getElementById('rename-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('rename-inp').focus(),40);
+}
+function closeRenameModal(){document.getElementById('rename-modal').classList.remove('open');renamingCol=null;}
+function applyRename(){
+  const v=document.getElementById('rename-inp').value.trim();
+  if(renamingCol){if(v&&v!==renamingCol)S.renameMap[renamingCol]=v;else delete S.renameMap[renamingCol];}
+  closeRenameModal();renderColList();updateAllDropdowns();
+}
+document.getElementById('rename-inp').addEventListener('keydown',e=>{if(e.key==='Enter')applyRename();if(e.key==='Escape')closeRenameModal();});
+document.getElementById('rename-modal').addEventListener('click',e=>{if(e.target===document.getElementById('rename-modal'))closeRenameModal();});
+
+// ═══════════════════════ FILTER MODAL ═══════════════════════
+function openFilterModal(idx){
+  S.editingFilterIdx=idx;
+  document.getElementById('fm-title').textContent=idx===null?'Add Filter':'Edit Filter';
+  document.getElementById('fm-col').innerHTML=S.columns.map(c=>`<option value="${c}">${dn(c)}</option>`).join('');
+  const f=idx!==null?S.filters[idx]:null;
+  if(f){document.getElementById('fm-col').value=f.col;document.getElementById('fm-op').value=f.op;document.getElementById('fm-va').value=f.a??0;document.getElementById('fm-vb').value=f.b??0;document.getElementById('fm-tol').value=f.tol??0.5;document.getElementById('fm-str').value=f.str||'';}
+  else{document.getElementById('fm-op').value='gt';document.getElementById('fm-va').value=0;}
+  fmColChange();fmOpChange();
+  document.getElementById('filter-modal').classList.add('open');
+}
+function closeFilterModal(){document.getElementById('filter-modal').classList.remove('open');}
+function fmColChange(){const col=document.getElementById('fm-col').value;if(S.types[col]==='categorical'){document.getElementById('fm-op').value='contains';fmOpChange();}}
+function fmOpChange(){
+  const op=document.getElementById('fm-op').value;
+  document.getElementById('fm-vb-w').hidden=op!=='between';
+  document.getElementById('fm-tol-w').hidden=op!=='eq';
+  document.getElementById('fm-num-rows').hidden=['contains','exactly','none'].includes(op);
+  document.getElementById('fm-str-row').hidden=!['contains','exactly'].includes(op);
+}
+function applyFilter(){
+  const f={col:document.getElementById('fm-col').value,op:document.getElementById('fm-op').value,
+    a:parseFloat(document.getElementById('fm-va').value)||0,b:parseFloat(document.getElementById('fm-vb').value)||0,
+    tol:parseFloat(document.getElementById('fm-tol').value)||0.5,str:document.getElementById('fm-str').value};
+  if(S.editingFilterIdx!==null)S.filters[S.editingFilterIdx]=f;else S.filters.push(f);
+  closeFilterModal();renderFilterChips();toast('Filter applied');
+}
+document.getElementById('filter-modal').addEventListener('click',e=>{if(e.target===document.getElementById('filter-modal'))closeFilterModal();});
+
+function renderFilterChips(){
+  const OL={none:'all',gt:'>',gte:'≥',lt:'<',lte:'≤',eq:'=',between:'between',contains:'∋',exactly:'=='};
+  if(!S.filters.length){document.getElementById('filt-chips').innerHTML='<div style="font-size:11px;color:#3e6a89;margin-bottom:4px;">No active filters</div>';document.getElementById('filt-count').textContent='';return;}
+  document.getElementById('filt-count').textContent=`(${S.filters.length})`;
+  document.getElementById('filt-chips').innerHTML=S.filters.map((f,i)=>{
+    const vstr=f.op==='between'?`${f.a}–${f.b}`:f.op==='eq'?`${f.a}±${f.tol}`:(['contains','exactly'].includes(f.op)?`"${f.str}"`:f.a);
+    return `<div class="filter-chip">${dn(f.col)} ${OL[f.op]||f.op} ${vstr}
+      <span class="fx" onclick="openFilterModal(${i})">✏</span>
+      <span class="fx" onclick="removeFilter(${i})">✕</span></div>`;
+  }).join('');
+}
+function removeFilter(i){S.filters.splice(i,1);renderFilterChips();toast('Filter removed');}
+
+// ═══════════════════════ DROPDOWNS ═══════════════════════
+function fillSel(id,opts,addNone=false){
+  const el=document.getElementById(id);if(!el)return;
+  el.innerHTML=(addNone?'<option value="">— none —</option>':'')+opts.map(c=>`<option value="${c}">${dn(c)}</option>`).join('');
+}
+function fillMulti(id,opts,maxSel=8){
+  const el=document.getElementById(id);if(!el)return;
+  el.innerHTML=opts.map(c=>`<option value="${c}">${dn(c)}</option>`).join('');
+  if(maxSel>0) Array.from(el.options).slice(0,maxSel).forEach(o=>o.selected=true);
+}
+function setVal(id,val){const el=document.getElementById(id);if(el&&val)el.value=val;}
+
+function updateAllDropdowns(){
+  const nc=numCols(), ac=allCols();
+  // Prefer metrics (out:) for metric slots, variables (in:) for grouping slots
+  const metCols = S.metrics.length ? S.metrics : nc;
+  const varCols = S.variables.length ? S.variables : ac;
+  const numMetCols = metCols.filter(c=>S.types[c]==='numeric').length>0 ? metCols.filter(c=>S.types[c]==='numeric') : nc;
+
+  // 2D Scatter: prefer metrics for X/Y, variables for hue/symbol
+  fillSel('s2-x',nc); fillSel('s2-y',nc);
+  fillSel('s2-hue',ac,true); fillSel('s2-size',nc,true); fillSel('s2-sym',ac,true);
+  if(nc.length>1){setVal('s2-x',numMetCols[0]||nc[0]);setVal('s2-y',numMetCols[1]||nc[1]);}
+  // Only auto-set hue to a categorical variable — numeric variables create too many traces
+  if(S.variables.length){
+    const catVar=S.variables.find(c=>S.types[c]==='categorical');
+    if(catVar) setVal('s2-hue',catVar);
+  }
+
+  // 3D Scatter
+  fillSel('s3-x',nc);fillSel('s3-y',nc);fillSel('s3-z',nc);fillSel('s3-hue',ac,true);fillSel('s3-size',nc,true);
+  if(numMetCols.length>2){setVal('s3-x',numMetCols[0]);setVal('s3-y',numMetCols[1]);setVal('s3-z',numMetCols[2]);}
+
+  // Corr: ALL numeric columns; pre-select metrics (out:) if available, else all
+  fillMulti('corr-cols', nc, 0); // fill all, select none first
+  const corrEl=document.getElementById('corr-cols');
+  if(corrEl){
+    const toSelect=S.metrics.length ? S.metrics.filter(c=>S.types[c]==='numeric') : nc;
+    Array.from(corrEl.options).forEach(o=>{ o.selected=toSelect.includes(o.value); });
+  }
+
+  // KDE: ALL numeric columns; pre-select metrics (out:) if available
+  fillMulti('kde-metrics', nc, 0);
+  const kdeEl=document.getElementById('kde-metrics');
+  if(kdeEl){const toSel=S.metrics.length?S.metrics.filter(c=>S.types[c]==='numeric'):nc;Array.from(kdeEl.options).forEach(o=>o.selected=toSel.includes(o.value));}
+  fillSel('kde-cvar', S.variables.length ? S.variables : ac);
+  {const catVar=S.variables.find(c=>S.types[c]==='categorical');if(catVar)setVal('kde-cvar',catVar);else if(S.variables.length)setVal('kde-cvar',S.variables[0]);}
+
+  // Single Metric
+  fillSel('sm-metric', S.metrics.length ? S.metrics.filter(c=>S.types[c]==='numeric') : nc);
+  fillSel('sm-group', S.variables.length ? S.variables : ac, true);
+  {const catVar=S.variables.find(c=>S.types[c]==='categorical');if(catVar)setVal('sm-group',catVar);else if(S.variables.length)setVal('sm-group',S.variables[0]);}
+
+  // Line Plot
+  fillSel('lp-x',ac);fillSel('lp-y',nc);fillSel('lp-hue',ac,true);
+  if(S.variables.length){setVal('lp-x',S.variables[0]);}
+  if(S.metrics.length) setVal('lp-y',S.metrics.find(c=>S.types[c]==='numeric')||nc[0]);
+
+  // Parallel Coords: default to all numeric metrics + variables
+  const pcCols=[...S.metrics,...S.variables].filter(c=>S.types[c]==='numeric');
+  fillMulti('pc-axes', pcCols.length ? pcCols : nc);
+  fillSel('pc-color', nc, true);
+  if(S.metrics.length) setVal('pc-color', S.metrics.find(c=>S.types[c]==='numeric'));
+
+  // Range Analysis (sidebar)
+  fillSel('rf-metric', nc);
+  fillMulti('rf-vars', nc);
+  // pre-select metrics for metric, variables for vars when prefixes exist
+  if(S.metrics.length) setVal('rf-metric', S.metrics.find(c=>S.types[c]==='numeric')||nc[0]);
+  const rfVarsEl=document.getElementById('rf-vars');
+  if(rfVarsEl&&S.variables.length){
+    const toSel=S.variables.filter(c=>S.types[c]==='numeric');
+    Array.from(rfVarsEl.options).forEach(o=>o.selected=toSel.includes(o.value));
+  }
+  document.getElementById('rf-btn').disabled=false;
+
+  // Filter modal column list
+  fillSel('fm-col',ac);
+}
+
+// ═══════════════════════ SECTION TOGGLE ═══════════════════════
+function toggleSec(bodyId,arrId){
+  const b=document.getElementById(bodyId);const open=!b.classList.contains('hidden');
+  b.classList.toggle('hidden',open);
+  const arr=document.getElementById(arrId);if(arr)arr.classList.toggle('open',!open);
+}
+
+// ═══════════════════════ CHART SELECTION ═══════════════════════
+// ═══════════════════════ RANGE ANALYSIS (sidebar) ═══════════════════════
+function runRangeFilter(){
+  if(!S.rawData.length){toast('⚠️ Load a file first');return;}
+  const data=getFiltered();
+  document.getElementById('chart-placeholder').style.display='none';
+  const out=document.getElementById('plotly-out');
+  out.style.display='flex'; out.style.width=''; out.style.height='';
+  try{ chartRangeFilter(data); }catch(e){toast('⚠️ '+e.message);console.error(e);}
+}
+
+// ═══════════════════════ SIDEBAR + CONFIG TOGGLES ═══════════════════════
+let sidebarOpen=true;
+function toggleSidebar(){
+  sidebarOpen=!sidebarOpen;
+  document.getElementById('sidebar').classList.toggle('collapsed',!sidebarOpen);
+  const btn=document.getElementById('sidebar-toggle-btn');
+  btn.textContent=sidebarOpen?'◀':'▶';
+  btn.title=sidebarOpen?'Hide sidebar (S)':'Show sidebar (S)';
+}
+
+// Keyboard shortcuts: S = sidebar, H = config hide
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA') return;
+  if(e.key==='s'||e.key==='S') toggleSidebar();
+  if(e.key==='h'||e.key==='H') toggleCfg();
+});
+
+let cfgOpen=true;
+function toggleCfg(){
+  cfgOpen=!cfgOpen;
+  document.getElementById('cfg-body').style.display=cfgOpen?'block':'none';
+  document.getElementById('cfg-toggle').textContent=cfgOpen?'▲ Hide config':'▼ Show config';
+}
+
+const CHART_META={
+  scatter2d:['2D Scatter Plot','X vs Y with optional color, size, and marker shape'],
+  scatter3d:['3D Scatter Plot','X, Y, Z axes with optional color encoding'],
+  corr:['Correlation Matrix','Pairwise Pearson correlations between numeric columns'],
+  kde:['KDE Density Plots','Kernel density estimates per metric, grouped by a variable'],
+  single:['Single Metric Analysis','Box, violin, strip, bar or ECDF for one metric'],
+  line:['Line Plot','Trends and evolution along X axis'],
+  parcoords:['Parallel Coordinates','Compare multiple axes simultaneously; drag to filter'],
+};
+function selectChart(type){
+  document.querySelectorAll('.ctab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(`ctab-${type}`).classList.add('active');
+  ['scatter2d','scatter3d','corr','kde','single','line','parcoords'].forEach(t=>{
+    document.getElementById(`cfg-${t}`).style.display=t===type?'block':'none';
+  });
+  const [title,sub]=CHART_META[type]||[type,''];
+  document.getElementById('mhdr-title').textContent=title;
+  document.getElementById('mhdr-sub').textContent=sub;
+  document.getElementById('cfg-panel-label').textContent='Configure: '+title;
+  // Re-open config when switching chart type
+  if(!cfgOpen) toggleCfg();
+  S.currentChart=type;
+}
+
+// ═══════════════════════ PREVIEW ═══════════════════════
+let prevOpen=false;
+function togglePreview(){
+  prevOpen=!prevOpen;
+  document.getElementById('preview-area').classList.toggle('open',prevOpen);
+  document.getElementById('preview-btn').textContent=prevOpen?'Hide preview':'Preview';
+  if(prevOpen){
+    const rows=S.rawData.slice(0,50);const cols=S.columns;
+    document.getElementById('prev-tbl').innerHTML=
+      `<thead><tr>${cols.map(c=>`<th>${dn(c)}</th>`).join('')}</tr></thead>`+
+      `<tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${r[c]??''}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  }
+}
+function rfOpChange(){
+  const op=document.getElementById('rf-op').value;
+  document.getElementById('rf-vb-w').hidden=op!=='between';
+  document.getElementById('rf-tol-w').hidden=op!=='eq';
+}
+
+// ═══════════════════════ CHART GENERATOR ═══════════════════════
+const CFG={responsive:false,displayModeBar:true,modeBarButtonsToRemove:['select2d','lasso2d'],displaylogo:false,
+  toImageButtonOptions:{format:'png',scale:4}};
+const SC=0.65; // base size factor vs original notebook sizes
+
+// After each render: CSS scale the chart so it fits entirely in the panel viewport
+function fitChart(){
+  const panel=document.getElementById('chart-panel');
+  const out=document.getElementById('plotly-out');
+  const legend=document.getElementById('corr-legend');
+  // Reset transform first to read natural size
+  out.style.transform='';
+  const chartW=out.offsetWidth, chartH=out.offsetHeight;
+  if(!chartW||!chartH) return;
+  const pad=24;
+  const legendW=(legend.style.display!=='none')?legend.offsetWidth+8:0;
+  const availW=panel.clientWidth-pad-legendW;
+  const availH=panel.clientHeight-pad;
+  const s=Math.min(1, availW/chartW, availH/chartH);
+  out.style.transform=`scale(${s})`;
+  // Collapse the space to the scaled size so legend stays snug
+  out.style.width=chartW+'px';
+  out.style.height=chartH+'px';
+  out.style.marginRight=(chartW*s-chartW)+'px';
+  out.style.marginBottom=(chartH*s-chartH)+'px';
+}
+
+// Named colorscales that Plotly.js doesn't support with _r suffix — provide reversed arrays
+const CSCALES={
+  RdBu_r:[[0,'rgb(103,0,31)'],[.1,'rgb(178,24,43)'],[.2,'rgb(214,96,77)'],[.3,'rgb(244,165,130)'],[.4,'rgb(253,219,199)'],[.5,'rgb(247,247,247)'],[.6,'rgb(209,229,240)'],[.7,'rgb(146,197,222)'],[.8,'rgb(67,147,195)'],[.9,'rgb(33,102,172)'],[1,'rgb(5,48,97)']],
+  RdYlGn_r:[[0,'rgb(0,104,55)'],[.125,'rgb(26,152,80)'],[.25,'rgb(102,189,99)'],[.375,'rgb(166,217,106)'],[.5,'rgb(255,255,191)'],[.625,'rgb(253,174,97)'],[.75,'rgb(244,109,67)'],[.875,'rgb(215,48,39)'],[1,'rgb(165,0,38)']],
+};
+function resolveCS(name){return CSCALES[name]||name;}
+
+function setChartTitle(txt){
+  const el=document.getElementById('chart-title-bar');
+  el.textContent=txt; el.style.display=txt?'block':'none';
+}
+
+// Wrapper: render + fit
+function plotChart(traces,layout){
+  return Plotly.react('plotly-out',traces,layout,CFG)
+    .then(()=>requestAnimationFrame(fitChart))
+    .catch(e=>{toast('⚠️ Chart error: '+e.message);console.error('Plotly error:',e);});
+}
+
+function generateChart(){
+  if(!S.rawData.length){toast('⚠️ Load a file first');return;}
+  const data=getFiltered();
+  if(!data.length){toast('⚠️ No data after filters');return;}
+  document.getElementById('chart-placeholder').style.display='none';
+  document.getElementById('corr-legend').style.display='none';
+  const out=document.getElementById('plotly-out');
+  out.style.display='flex'; out.style.width=''; out.style.height='';
+  try{
+    switch(S.currentChart){
+      case 'scatter2d':   chart2D(data); break;
+      case 'scatter3d':   chart3D(data); break;
+      case 'corr':        chartCorr(data); break;
+      case 'kde':         chartKDE(data); break;
+      case 'single':      chartSingle(data); break;
+      case 'line':        chartLine(data); break;
+      case 'parcoords':   chartParCoords(data); break;
+    }
+  }catch(e){toast('⚠️ Error: '+e.message);console.error(e);}
+}
+
+// ── 2D SCATTER ──
+function chart2D(data){
+  const xc=document.getElementById('s2-x').value;
+  const yc=document.getElementById('s2-y').value;
+  const hc=document.getElementById('s2-hue').value||null;
+  const sc=document.getElementById('s2-size').value||null;
+  const syc=document.getElementById('s2-sym').value||null;
+  if(!xc||!yc){toast('⚠️ Select X and Y');return;}
+  const xv=data.map(r=>toNum(r[xc]));
+  const yv=data.map(r=>toNum(r[yc]));
+  const symList=['circle','square','diamond','triangle-up','cross','pentagon','star','hexagon'];
+  let traces=[];
+
+  if(hc){
+    const cats=[...new Set(data.map(r=>String(r[hc]??'N/A')))].sort((a,b)=>{
+      const na=Number(a),nb=Number(b);return(!isNaN(na)&&!isNaN(nb))?na-nb:a.localeCompare(b);
+    });
+    const cols=palette('tab10',cats.length);
+    const symCats=syc?[...new Set(data.map(r=>String(r[syc]??'')))]:[];
+    traces=cats.map((cat,ci)=>{
+      const idx=data.reduce((a,_,i)=>String(data[i][hc]??'N/A')===cat?[...a,i]:a,[]);
+      const xs=idx.map(i=>xv[i]),ys=idx.map(i=>yv[i]);
+      let sz=8;
+      if(sc){const raw=idx.map(i=>toNum(data[i][sc]));const mn=Math.min(...raw.filter(v=>!isNaN(v))),mx=Math.max(...raw.filter(v=>!isNaN(v)));sz=raw.map(v=>isNaN(v)?7:7+(v-mn)/(mx-mn||1)*20);}
+      const sym=syc?idx.map(i=>symList[symCats.indexOf(String(data[i][syc]??''))%symList.length]):'circle';
+      return{type:'scatter',mode:'markers',name:cat,x:xs,y:ys,
+        marker:{color:cols[ci],size:sz,symbol:sym,opacity:.75,line:{color:'rgba(30,30,30,.5)',width:.5}}};
+    });
+  } else {
+    let sz=8;
+    if(sc){const raw=data.map(r=>toNum(r[sc]));const mn=Math.min(...raw.filter(v=>!isNaN(v))),mx=Math.max(...raw.filter(v=>!isNaN(v)));sz=raw.map(v=>isNaN(v)?7:7+(v-mn)/(mx-mn||1)*20);}
+    traces=[{type:'scatter',mode:'markers',x:xv,y:yv,
+      marker:{color:'#1f77b4',size:sz,opacity:.75,line:{color:'rgba(30,30,30,.5)',width:.5}}}];
+  }
+  const L={...BL(`${dn(yc)} vs ${dn(xc)}`),
+    width:Math.round(1000*SC), height:Math.round(600*SC),
+    xaxis:AX(dn(xc)), yaxis:AX(dn(yc)),
+    showlegend:!!hc, legend:{x:1.02,y:1,xanchor:'left',bgcolor:'rgba(255,255,255,0.9)',bordercolor:'#ccc',borderwidth:1,font:{size:11}}};
+  plotChart(traces,L);
+}
+
+// ── 3D SCATTER ──
+function chart3D(data){
+  const xc=document.getElementById('s3-x').value,yc=document.getElementById('s3-y').value,zc=document.getElementById('s3-z').value;
+  const hc=document.getElementById('s3-hue').value||null;
+  const cmap=document.getElementById('s3-cmap').value;
+  if(!xc||!yc||!zc){toast('⚠️ Select X, Y, Z');return;}
+  const xv=data.map(r=>toNum(r[xc])),yv=data.map(r=>toNum(r[yc])),zv=data.map(r=>toNum(r[zc]));
+  let traces=[];
+  if(hc){
+    const cats=[...new Set(data.map(r=>String(r[hc]??'N/A')))].sort();
+    const cols=palette('tab10',cats.length);
+    traces=cats.map((cat,ci)=>{
+      const idx=data.reduce((a,_,i)=>String(data[i][hc]??'N/A')===cat?[...a,i]:a,[]);
+      return{type:'scatter3d',mode:'markers',name:cat,
+        x:idx.map(i=>xv[i]),y:idx.map(i=>yv[i]),z:idx.map(i=>zv[i]),
+        marker:{color:cols[ci],size:4,opacity:.75,line:{width:0}}};
+    });
+  } else {
+    traces=[{type:'scatter3d',mode:'markers',x:xv,y:yv,z:zv,
+      marker:{color:zv,colorscale:cmap,size:4,opacity:.75,showscale:true,
+        colorbar:{thickness:14,len:.75,title:{text:dn(zc),side:'right'},tickfont:{size:10}}}}];
+  }
+  const L={title:{text:`${dn(zc)} vs ${dn(xc)} / ${dn(yc)}`,font:{size:13,color:'#1a1a1a'},x:.5,xanchor:'center'},
+    width:Math.round(1000*SC), height:Math.round(800*SC),
+    paper_bgcolor:'white',font:{family:'system-ui,sans-serif',size:11},
+    scene:{xaxis:{title:dn(xc),showgrid:false,showline:true,linecolor:'#333',ticks:'outside',ticklen:4},
+           yaxis:{title:dn(yc),showgrid:false,showline:true,linecolor:'#333',ticks:'outside',ticklen:4},
+           zaxis:{title:dn(zc),showgrid:false,showline:true,linecolor:'#333',ticks:'outside',ticklen:4},
+           bgcolor:'white'},
+    margin:{l:0,r:0,t:50,b:0},showlegend:!!hc,legend:{x:0,y:1}};
+  plotChart(traces,L);
+}
+
+// ── CORRELATION MATRIX ──
+function pearson(a,b){
+  const n=a.length;if(n<2)return NaN;
+  const ma=a.reduce((x,y)=>x+y,0)/n,mb=b.reduce((x,y)=>x+y,0)/n;
+  let num=0,da2=0,db2=0;
+  for(let i=0;i<n;i++){const da=a[i]-ma,db=b[i]-mb;num+=da*db;da2+=da*da;db2+=db*db;}
+  return da2*db2===0?NaN:num/Math.sqrt(da2*db2);
+}
+function chartCorr(data){
+  const sel=document.getElementById('corr-cols');
+  const cols=Array.from(sel.selectedOptions).map(o=>o.value);
+  if(cols.length<2){toast('⚠️ Select ≥ 2 columns');return;}
+  const cmap=document.getElementById('corr-cmap').value;
+  const tri=document.getElementById('corr-tri').value;
+  const showV=document.getElementById('corr-annot').checked;
+  const shortL=document.getElementById('corr-short').checked;
+  const n=cols.length;
+  const labels=shortL?cols.map((_,i)=>String.fromCharCode(65+i)):cols.map(dn);
+  const z=[],txt=[];
+  for(let i=0;i<n;i++){
+    z.push([]);txt.push([]);
+    for(let j=0;j<n;j++){
+      if(tri==='lower'&&j>i){z[i].push(null);txt[i].push('');continue;}
+      const pairs=data.filter(r=>!isNaN(toNum(r[cols[i]]))&&!isNaN(toNum(r[cols[j]])));
+      const r2=i===j?1:pearson(pairs.map(r=>toNum(r[cols[i]])),pairs.map(r=>toNum(r[cols[j]])));
+      z[i].push(isNaN(r2)?null:r2);txt[i].push(isNaN(r2)?'':r2.toFixed(2));
+    }
+  }
+  // HTML legend outside the chart
+  const cl=document.getElementById('corr-legend');
+  if(shortL){
+    cl.innerHTML=cols.map((col,i)=>
+      `<div class="cl-row"><span class="cl-key">${String.fromCharCode(65+i)}</span>${dn(col)}</div>`
+    ).join('');
+    cl.style.display='flex';
+  } else {
+    cl.innerHTML=''; cl.style.display='none';
+  }
+  // Square cells: cap at 600px plot area so it fits the panel
+  const maxPlot=600;
+  const cellPx=Math.min(56, Math.floor(maxPlot/n));
+  const plotArea=n*cellPx;
+  const mL=90, mT=55, mB=110, mR=90+70; // colorbar only, no label margin
+  const corrW=plotArea+mL+mR, corrH=plotArea+mT+mB;
+  const L={...BL('Correlation Matrix'),
+    width:corrW, height:corrH,
+    xaxis:{showgrid:false,zeroline:false,showline:false,side:'bottom',tickangle:-45,tickfont:{size:chartTS()},
+           scaleanchor:'y',constrain:'domain'},
+    yaxis:{showgrid:false,zeroline:false,showline:false,autorange:'reversed',tickfont:{size:chartTS()},
+           constrain:'domain'},
+    margin:{l:mL,r:mR,t:mT,b:mB}};
+  plotChart([{
+    type:'heatmap',z,x:labels,y:labels,
+    text:showV?txt:undefined,texttemplate:showV?'%{text}':undefined,
+    textfont:{size:Math.max(6,chartTS()-1)},colorscale:resolveCS(cmap),zmin:-1,zmid:0,zmax:1,
+    colorbar:{thickness:16,len:.85,tickfont:{size:chartTS()},x:1.02,xanchor:'left',title:{text:'r',side:'right',font:{size:chartTS()}}},hoverongaps:false,
+  }],L);
+}
+
+// ── KDE DENSITY ──
+function chartKDE(data){
+  const sel=document.getElementById('kde-metrics');
+  const metrics=Array.from(sel.selectedOptions).map(o=>o.value);
+  if(!metrics.length){toast('⚠️ Select ≥ 1 metric');return;}
+  const cvar=document.getElementById('kde-cvar').value;
+  const ncols=Math.max(1,parseInt(document.getElementById('kde-ncols').value)||3);
+  const maxCat=parseInt(document.getElementById('kde-maxcat').value)||10;
+  const nrows=Math.ceil(metrics.length/ncols);
+  const allCats=cvar?[...new Set(data.map(r=>String(r[cvar]??'N/A')))].slice(0,maxCat):['All'];
+  const cols=palette('tab10',allCats.length);
+  const traces=[],annotations=[];
+
+  for(let mi=0;mi<metrics.length;mi++){
+    const metric=metrics[mi];
+    const xi=mi===0?'x':`x${mi+1}`;
+    const yi=mi===0?'y':`y${mi+1}`;
+    const ci=(mi%ncols)+1,ri=Math.floor(mi/ncols)+1;
+    allCats.forEach((cat,ci2)=>{
+      const subset=cvar?data.filter(r=>String(r[cvar]??'N/A')===cat):data;
+      const vals=subset.map(r=>toNum(r[metric])).filter(v=>!isNaN(v));
+      if(!vals.length)return;
+      traces.push({type:'violin',y:vals,name:cat,legendgroup:cat,showlegend:mi===0,
+        line:{color:cols[ci2],width:2},fillcolor:cols[ci2]+'99',opacity:.7,
+        points:false,box:{visible:false},meanline:{visible:true,color:cols[ci2],width:1.5},
+        xaxis:xi,yaxis:yi});
+    });
+    annotations.push({
+      text:`<b>${dn(metric)}</b>`,
+      x:((ci-.5)/ncols),y:1-(ri-1)/nrows,
+      xref:'paper',yref:'paper',showarrow:false,
+      font:{size:chartTS(),color:'#1a1a1a'},xanchor:'center',yanchor:'bottom'
+    });
+  }
+  const L={
+    title:{text:`KDE Density${cvar?` — by ${dn(cvar)}`:''}`,font:{size:13,color:'#1a1a1a'},x:.5,xanchor:'center'},
+    width:Math.round(4.8*ncols*100*SC), height:Math.round(3.2*nrows*100*SC),
+    paper_bgcolor:'white',plot_bgcolor:'white',
+    font:{family:'system-ui,sans-serif',size:11},
+    showlegend:!!cvar,legend:{x:1.01,y:1,xanchor:'left',bgcolor:'rgba(255,255,255,.9)',bordercolor:'#ccc',borderwidth:1},
+    annotations,margin:{l:55,r:cvar?140:30,t:50,b:20},
+    grid:{rows:nrows,columns:ncols,pattern:'independent',roworder:'top to bottom'},
+  };
+  for(let i=0;i<metrics.length;i++){
+    const s=i===0?'':`${i+1}`;
+    L[`xaxis${s}`]={showticklabels:false,zeroline:false,showgrid:false,showline:false,ticks:''};
+    L[`yaxis${s}`]={showgrid:false,zeroline:false,showline:true,linecolor:'#333',linewidth:1.2,ticks:'outside',ticklen:4,tickfont:{size:9}};
+  }
+  plotChart(traces,L);
+}
+
+// ── SINGLE METRIC ──
+function chartSingle(data){
+  const mc=document.getElementById('sm-metric').value;
+  const gc=document.getElementById('sm-group').value||null;
+  const type=document.getElementById('sm-type').value;
+  const orient=document.getElementById('sm-orient').value;
+  const palName=document.getElementById('sm-pal').value;
+  if(!mc){toast('⚠️ Select a metric');return;}
+  const groups=gc?[...new Set(data.map(r=>String(r[gc]??'N/A')))].sort((a,b)=>{
+    const na=Number(a),nb=Number(b);return(!isNaN(na)&&!isNaN(nb))?na-nb:a.localeCompare(b);
+  }):['All'];
+  const cols=palette(palName,groups.length);
+  const isH=orient==='h';
+  let traces=[];
+
+  if(type==='ecdf'){
+    groups.forEach((grp,gi)=>{
+      const subset=gc?data.filter(r=>String(r[gc]??'N/A')===grp):data;
+      const vals=subset.map(r=>toNum(r[mc])).filter(v=>!isNaN(v)).sort((a,b)=>a-b);
+      const ecdf=vals.map((_,i)=>(i+1)/vals.length);
+      traces.push({type:'scatter',mode:'lines',name:grp,
+        x:isH?ecdf:vals,y:isH?vals:ecdf,
+        line:{color:cols[gi],width:2.2}});
+    });
+  } else if(type==='bar'){
+    const labels=[],means=[],stds=[];
+    groups.forEach(grp=>{
+      const subset=gc?data.filter(r=>String(r[gc]??'N/A')===grp):data;
+      const vals=subset.map(r=>toNum(r[mc])).filter(v=>!isNaN(v));
+      const mean=vals.reduce((a,b)=>a+b,0)/vals.length;
+      const std=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2,0)/vals.length);
+      labels.push(grp);means.push(mean);stds.push(std);
+    });
+    traces=[{type:'bar',
+      x:isH?means:labels,y:isH?labels:means,orientation:isH?'h':'v',
+      error_x:isH?{type:'data',array:stds,visible:true,color:'#444',thickness:1.5,width:4}:undefined,
+      error_y:!isH?{type:'data',array:stds,visible:true,color:'#444',thickness:1.5,width:4}:undefined,
+      marker:{color:cols.slice(0,groups.length),line:{color:'rgba(40,40,40,.4)',width:.8}},
+      showlegend:false}];
+  } else {
+    groups.forEach((grp,gi)=>{
+      const subset=gc?data.filter(r=>String(r[gc]??'N/A')===grp):data;
+      const vals=subset.map(r=>toNum(r[mc])).filter(v=>!isNaN(v));
+      const tr={type:type==='violin'?'violin':'box',name:grp,
+        marker:{color:cols[gi],size:type==='strip'?3:6,opacity:.75,line:{color:'rgba(30,30,30,.4)',width:.4}},
+        line:{color:cols[gi]},fillcolor:cols[gi]+'60'};
+      if(isH){tr.x=vals;tr.orientation='h';}else{tr.y=vals;}
+      if(type==='strip'){
+        tr.type='box';tr.boxpoints='all';tr.jitter=.4;tr.pointpos=0;
+        tr.fillcolor='rgba(0,0,0,0)';tr.line={color:'rgba(0,0,0,0)'};
+        tr.marker={color:cols[gi],size:3.5,opacity:.55,line:{color:'rgba(30,30,30,.3)',width:.3}};
+      } else if(type==='violin'){
+        tr.points=false;tr.box={visible:true,width:.3};
+        tr.meanline={visible:true,color:cols[gi],width:1.5};
+      }
+      traces.push(tr);
+    });
+  }
+  const xTitle=isH?{text:type==='ecdf'?'Cumulative probability':dn(mc)}:(gc?{text:dn(gc),font:{size:12}}:{});
+  const yTitle=!isH?{text:type==='ecdf'?'Cumulative probability':dn(mc)}:{};
+  const L={...BL(`${dn(mc)}${gc?` by ${dn(gc)}`:''}  (N=${data.length.toLocaleString()})`),
+    width:Math.round(Math.max(7,0.8*groups.length+3)*100*SC), height:Math.round(500*SC),
+    xaxis:{...AX(''),title:xTitle,...(isH?{}:{showline:true,linecolor:'#333',ticks:'outside',ticklen:5})},
+    yaxis:{...AX(''),title:yTitle,...(isH?{showline:true,linecolor:'#333',ticks:'outside',ticklen:5}:{})},
+    showlegend:type==='ecdf'&&!!gc,
+    legend:{x:1.02,y:1,xanchor:'left',bgcolor:'rgba(255,255,255,.9)',bordercolor:'#ccc',borderwidth:1,font:{size:11}},
+    boxmode:'group',violinmode:'group'};
+  plotChart(traces,L);
+}
+
+// ── LINE PLOT ──
+function chartLine(data){
+  const xc=document.getElementById('lp-x').value,yc=document.getElementById('lp-y').value;
+  const hc=document.getElementById('lp-hue').value||null;
+  const ls=document.getElementById('lp-ls').value,mk=document.getElementById('lp-mk').value;
+  if(!xc||!yc){toast('⚠️ Select X and Y');return;}
+  const mode=mk==='none'?'lines':'lines+markers';
+  let traces=[];
+  if(hc){
+    const cats=[...new Set(data.map(r=>String(r[hc]??'N/A')))].sort();
+    const cols=palette('tab10',cats.length);
+    traces=cats.map((cat,ci)=>{
+      const subset=data.filter(r=>String(r[hc]??'N/A')===cat).sort((a,b)=>toNum(a[xc])-toNum(b[xc]));
+      return{type:'scatter',mode,name:cat,
+        x:subset.map(r=>toNum(r[xc])),y:subset.map(r=>toNum(r[yc])),
+        line:{color:cols[ci],dash:ls,width:2.2},
+        marker:{symbol:mk,size:7,color:cols[ci],line:{color:'rgba(30,30,30,.4)',width:.5}}};
+    });
+  } else {
+    const sorted=[...data].sort((a,b)=>toNum(a[xc])-toNum(b[xc]));
+    traces=[{type:'scatter',mode,
+      x:sorted.map(r=>toNum(r[xc])),y:sorted.map(r=>toNum(r[yc])),
+      line:{color:'#1f77b4',dash:ls,width:2.2},
+      marker:{symbol:mk,size:7,color:'#1f77b4',line:{color:'rgba(30,30,30,.4)',width:.5}}}];
+  }
+  const L={...BL(`${dn(yc)} vs ${dn(xc)}`),
+    width:Math.round(1200*SC), height:Math.round(600*SC),
+    xaxis:AX(dn(xc)),yaxis:AX(dn(yc)),
+    showlegend:!!hc,legend:{x:1.02,y:1,xanchor:'left',bgcolor:'rgba(255,255,255,.9)',bordercolor:'#ccc',borderwidth:1,font:{size:11}}};
+  plotChart(traces,L);
+}
+
+// ── PARALLEL COORDINATES ──
+function chartParCoords(data){
+  const sel=document.getElementById('pc-axes');
+  const axes=Array.from(sel.selectedOptions).map(o=>o.value);
+  if(axes.length<2){toast('⚠️ Select ≥ 2 axes');return;}
+  const colorCol=document.getElementById('pc-color').value||null;
+  const cmap=document.getElementById('pc-cmap').value;
+  const norm=document.getElementById('pc-norm').checked;
+  const dims=axes.map(col=>{
+    const vals=data.map(r=>toNum(r[col]));
+    const clean=vals.filter(v=>!isNaN(v));
+    const mn=Math.min(...clean),mx=Math.max(...clean);
+    return{label:dn(col),
+      values:norm?vals.map(v=>isNaN(v)?0:(v-mn)/(mx-mn||1)):vals,
+      range:norm?[0,1]:[mn,mx]};
+  });
+  let lineColor=data.map((_,i)=>i);
+  if(colorCol){
+    const cv=data.map(r=>toNum(r[colorCol]));
+    if(cv.filter(v=>!isNaN(v)).length>data.length*.5)lineColor=cv.map(v=>isNaN(v)?0:v);
+  }
+  const L={title:{text:'Parallel Coordinates',font:{size:13,color:'#1a1a1a'},x:.5,xanchor:'center'},
+    width:Math.round(Math.max(26,1.4*axes.length+2)*100*SC), height:Math.round(700*SC),
+    paper_bgcolor:'white',font:{family:'system-ui,sans-serif',size:11},
+    margin:{l:80,r:80,t:90,b:60}};
+  plotChart([{type:'parcoords',
+    line:{color:lineColor,colorscale:cmap,showscale:!!colorCol,
+      colorbar:{thickness:12,len:.7,title:{text:colorCol?dn(colorCol):'',side:'right'},tickfont:{size:10}}},
+    dimensions:dims,labelfont:{size:chartTS()},tickfont:{size:Math.max(6,chartTS()-1)}
+  }],L);
+}
+
+// ── RANGE FILTER ──
+function chartRangeFilter(data){
+  const mc=document.getElementById('rf-metric').value;
+  const op=document.getElementById('rf-op').value;
+  const va=parseFloat(document.getElementById('rf-va').value)||0;
+  const vb=parseFloat(document.getElementById('rf-vb').value)||0;
+  const tol=parseFloat(document.getElementById('rf-tol').value)||0.5;
+  const varSel=document.getElementById('rf-vars');
+  const vars=Array.from(varSel.selectedOptions).map(o=>o.value);
+  const chartType=document.getElementById('rf-chart').value;
+  if(!mc||!vars.length){toast('⚠️ Select metric and variables');return;}
+
+  const filtered=op==='none'?data:data.filter(r=>{
+    const v=toNum(r[mc]);if(isNaN(v))return false;
+    if(op==='gt')return v>va;if(op==='gte')return v>=va;if(op==='lt')return v<va;if(op==='lte')return v<=va;
+    if(op==='eq')return Math.abs(v-va)<=tol;if(op==='between')return v>=va&&v<=vb;
+    return true;
+  });
+  const nAll=data.length,nFilt=filtered.length;
+  const opLabel={none:'all',gt:`>${va}`,gte:`≥${va}`,lt:`<${va}`,lte:`≤${va}`,eq:`=${va}±${tol}`,between:`${va}–${vb}`}[op];
+  const ncols=Math.min(vars.length,4),nrows=Math.ceil(vars.length/ncols);
+  const COL_ALL='#6b8ca8',COL_FILT='#e05454';
+  const traces=[],annotations=[];
+
+  vars.slice(0,8).forEach((v,vi)=>{
+    const xi=vi===0?'x':`x${vi+1}`;const yi=vi===0?'y':`y${vi+1}`;
+    const ci=(vi%ncols)+1,ri=Math.floor(vi/ncols)+1;
+    const allV=data.map(r=>toNum(r[v])).filter(x=>!isNaN(x));
+    const filtV=filtered.map(r=>toNum(r[v])).filter(x=>!isNaN(x));
+
+    if(chartType==='hist'){
+      traces.push({type:'histogram',name:`All (${nAll})`,x:allV,opacity:.45,marker:{color:COL_ALL},legendgroup:'all',showlegend:vi===0,xaxis:xi,yaxis:yi,nbinsx:30});
+      traces.push({type:'histogram',name:`Filtered (${nFilt})`,x:filtV,opacity:.7,marker:{color:COL_FILT},legendgroup:'filt',showlegend:vi===0,xaxis:xi,yaxis:yi,nbinsx:30});
+    } else {
+      const mk=(vals,name,col,show)=>({
+        type:chartType==='violin'?'violin':'box',y:vals,name,
+        marker:{color:col,size:4,opacity:.7},fillcolor:col+'55',line:{color:col},
+        xaxis:xi,yaxis:yi,legendgroup:name,showlegend:show,
+        ...(chartType==='violin'?{points:false,box:{visible:true},meanline:{visible:true}}:{})
+      });
+      traces.push(mk(allV,`All (${nAll})`,COL_ALL,vi===0));
+      traces.push(mk(filtV,`Filtered (${nFilt})`,COL_FILT,vi===0));
+    }
+    annotations.push({text:`<b>${dn(v)}</b>`,x:((ci-.5)/ncols),y:1-(ri-1)/nrows,
+      xref:'paper',yref:'paper',showarrow:false,font:{size:11,color:'#1a1a1a'},xanchor:'center',yanchor:'bottom'});
+  });
+
+  const L={
+    title:{text:`${dn(mc)} [${opLabel}]  — ${nFilt.toLocaleString()} / ${nAll.toLocaleString()} rows`,font:{size:13,color:'#1a1a1a'},x:.5,xanchor:'center'},
+    width:Math.round(8*ncols*100*SC), height:Math.round(4*nrows*100*SC),
+    paper_bgcolor:'white',plot_bgcolor:'white',
+    font:{family:'system-ui,sans-serif',size:11},
+    barmode:'overlay',boxmode:'group',
+    showlegend:true,legend:{x:1.01,y:1,xanchor:'left',bgcolor:'rgba(255,255,255,.9)',bordercolor:'#ccc',borderwidth:1,font:{size:11}},
+    annotations,margin:{l:55,r:130,t:50,b:25},
+    grid:{rows:nrows,columns:ncols,pattern:'independent',roworder:'top to bottom'}
+  };
+  for(let i=0;i<Math.min(vars.length,8);i++){
+    const s=i===0?'':`${i+1}`;
+    L[`xaxis${s}`]={showticklabels:false,zeroline:false,showgrid:false,showline:false,ticks:''};
+    L[`yaxis${s}`]={showgrid:false,zeroline:false,showline:true,linecolor:'#333',linewidth:1.2,ticks:'outside',ticklen:4,tickfont:{size:9}};
+  }
+  plotChart(traces,L);
+}
+
+// ═══════════════════════ INIT ═══════════════════════
+selectChart('scatter2d');
+</script>
+</body>
+</html>
