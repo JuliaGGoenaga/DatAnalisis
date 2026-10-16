@@ -4,153 +4,180 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Data Analysis Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;height:100vh;display:flex;overflow:hidden;}
+:root{
+  --acc:#3b6ef5; --acc-h:#2952d9; --acc-light:#eef2ff;
+  --sb-bg:#ffffff; --sb-border:#e8ebf0; --sb-hover:#f0f2f7;
+  --sb-text:#52637a; --sb-bright:#1a2333; --sb-dim:#9aaabb;
+  --bg:#edf0f5; --panel:#ffffff; --panel-b:#e8ebf0;
+  --tx:#1a2333; --tx-mid:#52637a; --tx-dim:#9aaabb;
+  --r:10px; --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.06);
+}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);height:100vh;display:flex;overflow:hidden;color:var(--tx);}
 
 /* ── SIDEBAR ── */
-#sidebar{width:272px;min-width:272px;background:white;color:#1a2a3a;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;font-size:13px;transition:width .2s,min-width .2s;border-right:1px solid #dde3ea;}
-#sidebar.collapsed{width:0;min-width:0;overflow:hidden;}
-#sidebar-title{padding:14px 16px;font-size:14px;font-weight:700;color:#1558a3;background:white;border-bottom:1px solid #dde3ea;letter-spacing:.3px;display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.s-sec{border-bottom:1px solid #dde3ea;}
-.s-sec-hdr{padding:9px 16px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:#4a7099;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;}
-.s-sec-hdr:hover{color:#1558a3;}
-.s-sec-body{padding:8px 12px 12px;}
+#sidebar{width:268px;min-width:268px;background:var(--sb-bg);color:var(--sb-text);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;font-size:13px;transition:width .22s cubic-bezier(.4,0,.2,1),min-width .22s cubic-bezier(.4,0,.2,1),margin .22s cubic-bezier(.4,0,.2,1);margin:14px 0 14px 14px;border-radius:var(--r);border:1px solid var(--sb-border);box-shadow:var(--shadow);}
+#sidebar.collapsed{width:0;min-width:0;overflow:hidden;margin:14px 0 14px 0;}
+#sidebar-title{padding:13px 16px 11px;font-size:13px;font-weight:700;color:var(--sb-bright);border-bottom:1px solid var(--sb-border);letter-spacing:-.1px;display:flex;align-items:center;gap:8px;flex-shrink:0;border-radius:var(--r) var(--r) 0 0;}
+#sidebar-title span{font-size:16px;opacity:.7;}
+
+.s-sec{border-bottom:1px solid var(--sb-border);}
+.s-sec-hdr{padding:7px 16px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--sb-dim);cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;transition:color .12s;}
+.s-sec-hdr:hover{color:var(--sb-text);}
+.s-sec-body{padding:6px 12px 10px;}
 .s-sec-body.hidden{display:none;}
-.arr{transition:transform .18s;display:inline-block;}
+.arr{transition:transform .2s cubic-bezier(.4,0,.2,1);display:inline-block;font-size:9px;opacity:.5;}
 .arr.open{transform:rotate(90deg);}
 
 /* Upload */
-.upload-zone{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;border:1.5px dashed #bdd0e4;background:#f4f8fb;color:#5a7d99;border-radius:6px;cursor:pointer;font-size:12px;transition:all .15s;}
-.upload-zone:hover{border-color:#1558a3;color:#1558a3;}
-.file-badge{font-size:10.5px;color:#3e6a89;margin-top:5px;line-height:1.4;}
-.btn-sm{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:5px;border:1px solid #bdd0e4;background:#eaf1f8;color:#3e6a89;font-size:11.5px;cursor:pointer;transition:all .15s;}
-.btn-sm:hover{border-color:#1558a3;color:#1558a3;}
+.upload-zone{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:10px;border:1.5px dashed var(--sb-border);background:var(--bg);color:var(--sb-dim);border-radius:7px;cursor:pointer;font-size:11.5px;transition:all .15s;font-weight:500;}
+.upload-zone:hover{border-color:var(--acc);color:var(--acc);background:var(--acc-light);}
+.file-badge{font-size:10.5px;color:var(--sb-dim);margin-top:5px;line-height:1.5;white-space:pre-wrap;}
+.btn-sm{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:6px;border:1px solid var(--sb-border);background:var(--bg);color:var(--sb-text);font-size:11.5px;font-family:inherit;cursor:pointer;transition:all .15s;font-weight:500;}
+.btn-sm:hover{border-color:var(--acc);color:var(--acc);background:var(--acc-light);}
 .btn-sm:disabled{opacity:.4;cursor:default;}
 
 /* Column list */
-#col-list{max-height:280px;overflow-y:auto;}
-.col-group-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:6px 4px 3px;color:#4a7099;}
-.col-row{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:4px;cursor:default;}
-.col-row:hover{background:#eaf1f8;}
-.col-name{flex:1;font-size:11.5px;color:#1a2a3a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.col-name.renamed{color:#1558a3;font-style:italic;}
-.type-pill{font-size:9px;padding:1px 5px;border-radius:8px;font-weight:700;text-transform:uppercase;flex-shrink:0;}
-.type-pill.numeric{background:#0a3d2e;color:#3ecbb5;}
-.type-pill.categorical{background:#38104a;color:#c07cf0;}
-.type-pill.metric{background:#0a2a4a;color:#5daadc;}
-.type-pill.variable{background:#2a2010;color:#e0a830;}
-/* rename button — always visible, properly sized */
-.rename-btn{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;font-size:10px;background:#eaf1f8;color:#1558a3;border:1px solid #bdd0e4;border-radius:4px;cursor:pointer;flex-shrink:0;white-space:nowrap;transition:all .12s;}
-.rename-btn:hover{background:#1558a3;color:#fff;border-color:#1558a3;}
+#col-list{max-height:240px;overflow-y:auto;}
+.col-group-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:6px 4px 2px;color:var(--sb-dim);}
+.col-row{display:flex;align-items:center;gap:5px;padding:3px 5px;border-radius:5px;cursor:default;}
+.col-row:hover{background:var(--sb-hover);}
+.col-name{flex:1;font-size:11.5px;color:var(--sb-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.col-name.renamed{color:var(--acc);font-style:italic;}
+.type-pill{font-size:8px;padding:1px 5px;border-radius:8px;font-weight:700;text-transform:uppercase;flex-shrink:0;letter-spacing:.3px;}
+.type-pill.numeric{background:#ecfdf5;color:#059669;}
+.type-pill.categorical{background:#f5f3ff;color:#7c3aed;}
+.type-pill.metric{background:#eff6ff;color:#2563eb;}
+.type-pill.variable{background:#fffbeb;color:#d97706;}
+.rename-btn{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;font-size:9px;background:var(--bg);color:var(--sb-dim);border:1px solid var(--sb-border);border-radius:4px;cursor:pointer;flex-shrink:0;white-space:nowrap;transition:all .12s;font-family:inherit;}
+.rename-btn:hover{background:var(--acc-light);color:var(--acc);border-color:var(--acc);}
 
 /* Filters */
-.filter-chip{display:inline-flex;align-items:center;gap:4px;background:#ddeef8;color:#1558a3;border-radius:10px;padding:2px 8px;font-size:11px;margin:2px;}
-.filter-chip .fx{cursor:pointer;opacity:.6;font-size:9px;}
+.filter-chip{display:inline-flex;align-items:center;gap:4px;background:var(--acc-light);color:var(--acc);border-radius:20px;padding:3px 9px;font-size:11px;margin:2px;border:1px solid rgba(59,110,245,.2);}
+.filter-chip .fx{cursor:pointer;opacity:.5;font-size:9px;transition:opacity .1s;}
 .filter-chip .fx:hover{opacity:1;}
-.add-filter-btn{width:100%;padding:5px;background:transparent;border:1px dashed #bdd0e4;color:#5a7d99;border-radius:4px;cursor:pointer;font-size:11px;margin-top:4px;}
-.add-filter-btn:hover:not(:disabled){border-color:#1558a3;color:#1558a3;}
-.add-filter-btn:disabled{opacity:.4;cursor:default;}
+.add-filter-btn{width:100%;padding:6px;background:transparent;border:1.5px dashed var(--sb-border);color:var(--sb-dim);border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;margin-top:5px;transition:all .15s;}
+.add-filter-btn:hover:not(:disabled){border-color:var(--acc);color:var(--acc);}
+.add-filter-btn:disabled{opacity:.35;cursor:default;}
 
 /* Chart tabs */
-.ctab{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;color:#6a8da5;font-size:12px;transition:all .12s;margin-bottom:2px;}
-.ctab:hover{background:#eaf1f8;color:#1558a3;}
-.ctab.active{background:#1558a3;color:#fff;font-weight:600;}
-.ctab .ti{font-size:14px;width:18px;text-align:center;}
+.ctab{display:flex;align-items:center;gap:9px;padding:6px 9px;border-radius:7px;cursor:pointer;color:var(--sb-text);font-size:12px;transition:all .12s;margin-bottom:1px;font-weight:500;position:relative;}
+.ctab:hover{background:var(--sb-hover);color:var(--sb-bright);}
+.ctab.active{background:var(--acc-light);color:var(--acc);font-weight:600;}
+.ctab.active::before{content:'';position:absolute;left:0;top:18%;bottom:18%;width:3px;background:var(--acc);border-radius:0 2px 2px 0;}
+.ctab .ti{font-size:13px;width:18px;text-align:center;opacity:.75;}
+
+/* Style config rows (sidebar) */
+.gs-row{margin-bottom:7px;}
+.gs-lbl{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--sb-dim);margin-bottom:3px;}
+.gs-val{font-size:11px;color:var(--sb-text);min-width:28px;text-align:right;font-variant-numeric:tabular-nums;}
+input[type=range]{accent-color:var(--acc);cursor:pointer;}
+input[type=color]{cursor:pointer;border:1px solid var(--sb-border);border-radius:4px;background:var(--bg);}
+.gs-sel{width:100%;padding:4px 6px;border:1px solid var(--sb-border);background:var(--bg);color:var(--sb-bright);border-radius:5px;font-size:11.5px;outline:none;font-family:inherit;}
+.gs-sel:focus{border-color:var(--acc);}
 
 /* ── MAIN ── */
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
-#mhdr{background:white;padding:11px 20px;border-bottom:1px solid #dde3ea;display:flex;align-items:center;gap:10px;flex-shrink:0;}
-#mhdr h2{font-size:15px;font-weight:700;color:#1b2b3c;}
-#mhdr .sub{font-size:11.5px;color:#6b7e8d;}
-#mhdr .stats{margin-left:auto;font-size:11.5px;color:#8a9dab;}
+#sidebar-toggle-btn{flex-shrink:0;background:var(--bg);border:1px solid var(--panel-b);border-radius:7px;padding:5px 9px;cursor:pointer;font-size:12px;color:var(--tx-mid);transition:all .15s;font-family:inherit;line-height:1;}
+#sidebar-toggle-btn:hover{background:var(--panel-b);color:var(--tx);}
+.stats{font-size:11px;color:var(--tx-dim);font-variant-numeric:tabular-nums;background:var(--bg);padding:3px 10px;border-radius:20px;border:1px solid var(--panel-b);white-space:nowrap;}
 
 #content{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:14px;gap:10px;}
 
-/* Config panel — collapsible */
-#cfg-panel{background:white;border-radius:8px;border:1px solid #dde3ea;flex-shrink:0;}
-#cfg-panel-hdr{display:flex;align-items:center;padding:9px 14px;border-bottom:1px solid #dde3ea;cursor:pointer;user-select:none;}
-#cfg-panel-hdr:hover{background:#f7fafc;}
-#cfg-panel-hdr span{font-size:11px;font-weight:700;color:#6b7e8d;text-transform:uppercase;letter-spacing:.6px;flex:1;}
-#cfg-toggle{font-size:11px;color:#8a9dab;background:#eef2f6;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;transition:all .12s;}
-#cfg-toggle:hover{background:#dde5ef;color:#1558a3;}
+/* Config panel */
+#cfg-panel{background:var(--panel);border-radius:var(--r);border:1px solid var(--panel-b);flex-shrink:0;box-shadow:var(--shadow);}
+#cfg-panel-hdr{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--panel-b);cursor:pointer;user-select:none;transition:background .12s;border-radius:var(--r) var(--r) 0 0;}
+#cfg-panel-hdr:hover{background:#f8fafc;}
+#cfg-toggle{font-size:10.5px;color:var(--tx-dim);background:var(--bg);border:1px solid var(--panel-b);border-radius:5px;padding:3px 9px;cursor:pointer;transition:all .12s;font-family:inherit;font-weight:500;}
+#cfg-toggle:hover{background:var(--acc-light);color:var(--acc);border-color:var(--acc);}
 #cfg-body{padding:14px 16px;}
-.cfg-title{font-size:13px;font-weight:700;color:#1b2b3c;margin-bottom:11px;}
-.cfg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:9px;}
+.cfg-lbl{font-size:10px;font-weight:600;color:var(--tx-mid);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.cfg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:9px;}
 .cfg-g{}
-.cfg-lbl{font-size:10.5px;font-weight:600;color:#6b7e8d;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
-.cfg-sel,.cfg-inp{width:100%;padding:5px 7px;border:1px solid #ccd5dd;background:#f7fafc;color:#1b2b3c;border-radius:5px;font-size:12px;outline:none;}
-.cfg-sel:focus,.cfg-inp:focus{border-color:#1558a3;background:white;}
+.cfg-sel,.cfg-inp{width:100%;padding:5px 8px;border:1px solid var(--panel-b);background:#f8fafc;color:var(--tx);border-radius:6px;font-size:12px;outline:none;font-family:inherit;transition:border-color .12s;}
+.cfg-sel:focus,.cfg-inp:focus{border-color:var(--acc);background:white;}
 .multi-sel{height:100px;}
 .cfg-chk{display:flex;align-items:center;gap:6px;margin:4px 0;}
-.cfg-chk label{font-size:12px;color:#3a4e5e;cursor:pointer;}
-input[type=checkbox]{accent-color:#1558a3;width:13px;height:13px;cursor:pointer;}
+.cfg-chk label{font-size:12px;color:var(--tx-mid);cursor:pointer;}
+input[type=checkbox]{accent-color:var(--acc);width:13px;height:13px;cursor:pointer;}
 
-.btn-gen{display:inline-flex;align-items:center;gap:6px;padding:7px 18px;background:#1558a3;color:white;border:none;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer;transition:background .12s;margin-top:11px;}
-.btn-gen:hover{background:#1047859;}
-.btn-sec{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#eaf1f8;color:#1558a3;border:1px solid #bdd0e4;border-radius:5px;font-size:11.5px;font-weight:600;cursor:pointer;transition:all .12s;}
-.btn-sec:hover{background:#d6e8f5;}
+.btn-gen{display:inline-flex;align-items:center;gap:6px;padding:7px 20px;background:var(--acc);color:white;border:none;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s;margin-top:11px;font-family:inherit;letter-spacing:-.1px;box-shadow:0 2px 8px rgba(59,110,245,.3);}
+.btn-gen:hover{background:var(--acc-h);transform:translateY(-1px);box-shadow:0 4px 14px rgba(59,110,245,.38);}
+.btn-gen:active{transform:translateY(0);}
+.btn-sec{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;background:var(--acc-light);color:var(--acc);border:1px solid rgba(59,110,245,.2);border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;transition:all .12s;font-family:inherit;}
+.btn-sec:hover{background:#dbeafe;border-color:var(--acc);}
 .btn-sec:disabled{opacity:.4;cursor:default;}
 
 /* Chart panel */
-#chart-panel{flex:1;background:white;border-radius:8px;border:1px solid #dde3ea;overflow:hidden;display:flex;flex-direction:column;min-height:300px;}
-#chart-placeholder{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#8a9dab;gap:8px;}
-#chart-placeholder .ph-ico{font-size:52px;}
-#chart-placeholder p{font-size:13px;}
-#chart-placeholder .ph2{font-size:11px;color:#b0c0cc;}
-/* chart title bar (used for charts that can't hold a Plotly title) */
-#chart-title-bar{display:none;text-align:center;font-size:13px;font-weight:600;color:#1a1a1a;padding:10px 0 4px;flex-shrink:0;}
-/* chart-inner holds the scaled chart + optional corr legend */
+#chart-panel{flex:1;background:var(--panel);border-radius:var(--r);border:1px solid var(--panel-b);overflow:hidden;display:flex;flex-direction:column;min-height:300px;box-shadow:var(--shadow);}
+#chart-placeholder{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--tx-dim);gap:10px;}
+#chart-placeholder .ph-ico{font-size:44px;opacity:.4;}
+#chart-placeholder p{font-size:13px;font-weight:500;color:var(--tx-mid);}
+#chart-placeholder .ph2{font-size:11px;color:var(--tx-dim);}
+#chart-title-bar{display:none;text-align:center;font-size:13px;font-weight:600;color:var(--tx);padding:10px 0 4px;flex-shrink:0;}
 #chart-inner{flex:1;display:flex;flex-direction:row;align-items:flex-start;overflow:hidden;position:relative;}
-/* plotly-out: fixed px size, CSS-scaled to fit */
 #plotly-out{flex-shrink:0;display:none;transform-origin:top left;}
-#corr-legend{display:none;flex-direction:column;justify-content:center;padding:16px 18px 16px 4px;gap:3px;min-width:160px;max-width:240px;overflow-y:auto;font-size:11.5px;font-family:system-ui,sans-serif;color:#222;}
-#corr-legend .cl-row{white-space:nowrap;}
-#corr-legend .cl-key{font-weight:700;color:#1a5f9e;margin-right:4px;}
+#corr-legend{display:none;flex-direction:column;justify-content:center;padding:16px 18px 16px 4px;gap:4px;min-width:160px;max-width:240px;overflow-y:auto;font-size:11.5px;font-family:'Inter',system-ui,sans-serif;color:var(--tx);}
+#corr-legend .cl-row{white-space:nowrap;padding:1px 0;}
+#corr-legend .cl-key{font-weight:700;color:var(--acc);margin-right:5px;font-variant-numeric:tabular-nums;}
+/* Scatter external legend */
+#scatter-legend{display:none;flex-direction:column;gap:12px;padding:14px 14px 14px 8px;min-width:120px;max-width:200px;overflow-y:auto;align-self:center;}
+.sl-sec{display:flex;flex-direction:column;gap:3px;}
+.sl-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx-mid);padding-bottom:4px;border-bottom:1px solid var(--panel-b);margin-bottom:1px;}
+.sl-row{display:flex;align-items:center;gap:6px;white-space:nowrap;padding:1px 0;}
+.sl-icon{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:18px;}
+.sl-lbl{font-size:11px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;max-width:140px;}
 
 /* Preview */
-#preview-area{display:none;background:white;border-radius:8px;border:1px solid #dde3ea;flex-shrink:0;}
+#preview-area{display:none;background:var(--panel);border-radius:var(--r);border:1px solid var(--panel-b);flex-shrink:0;box-shadow:var(--shadow);}
 #preview-area.open{display:block;}
-.prev-wrap{max-height:190px;overflow:auto;}
+.prev-wrap{max-height:180px;overflow:auto;}
 .prev-tbl{width:100%;border-collapse:collapse;font-size:11px;}
-.prev-tbl th{background:#f2f6fa;color:#6b7e8d;font-weight:600;padding:4px 8px;text-align:left;border-bottom:1px solid #dde3ea;position:sticky;top:0;}
-.prev-tbl td{padding:3px 8px;border-bottom:1px solid #f0f4f8;color:#1b2b3c;white-space:nowrap;}
+.prev-tbl th{background:#f8fafc;color:var(--tx-mid);font-weight:600;padding:5px 9px;text-align:left;border-bottom:1px solid var(--panel-b);position:sticky;top:0;font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;}
+.prev-tbl td{padding:3px 9px;border-bottom:1px solid #f4f7fa;color:var(--tx);white-space:nowrap;}
 
 /* ── MODALS ── */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.46);display:none;align-items:center;justify-content:center;z-index:200;}
+.modal-bg{position:fixed;inset:0;background:rgba(10,20,35,.45);display:none;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(4px);}
 .modal-bg.open{display:flex;}
-.modal-box{background:white;border-radius:10px;padding:22px;width:420px;max-width:92vw;box-shadow:0 8px 40px rgba(0,0,0,.22);}
-.modal-box h3{font-size:14px;font-weight:700;color:#1b2b3c;margin-bottom:14px;}
-.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
-.m-btn{padding:7px 16px;border-radius:5px;border:none;font-size:12.5px;cursor:pointer;font-weight:600;}
-.m-btn.primary{background:#1558a3;color:white;}
-.m-btn.primary:hover{background:#1047859;}
-.m-btn.cancel{background:#e8eff6;color:#6b7e8d;}
-.m-form-row{margin-bottom:10px;}
-.m-form-row label{display:block;font-size:11px;font-weight:600;color:#6b7e8d;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
-.m-form-row input,.m-form-row select{width:100%;padding:7px 9px;border:1px solid #ccd5dd;border-radius:5px;font-size:13px;outline:none;background:#f7fafc;color:#1b2b3c;}
-.m-form-row input:focus,.m-form-row select:focus{border-color:#1558a3;background:white;}
+.modal-box{background:var(--panel);border-radius:14px;padding:24px;width:420px;max-width:92vw;box-shadow:0 8px 40px rgba(0,0,0,.16),0 2px 8px rgba(0,0,0,.08);}
+.modal-box h3{font-size:14px;font-weight:700;color:var(--tx);margin-bottom:14px;letter-spacing:-.1px;}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
+.m-btn{padding:7px 18px;border-radius:7px;border:none;font-size:12.5px;cursor:pointer;font-weight:600;font-family:inherit;transition:all .12s;}
+.m-btn.primary{background:var(--acc);color:white;box-shadow:0 2px 8px rgba(59,110,245,.25);}
+.m-btn.primary:hover{background:var(--acc-h);}
+.m-btn.cancel{background:var(--bg);color:var(--tx-mid);border:1px solid var(--panel-b);}
+.m-btn.cancel:hover{background:var(--panel-b);}
+.m-form-row{margin-bottom:11px;}
+.m-form-row label{display:block;font-size:10.5px;font-weight:600;color:var(--tx-mid);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.m-form-row input,.m-form-row select{width:100%;padding:7px 10px;border:1px solid var(--panel-b);border-radius:7px;font-size:13px;outline:none;background:#f8fafc;color:var(--tx);font-family:inherit;transition:border-color .12s;}
+.m-form-row input:focus,.m-form-row select:focus{border-color:var(--acc);background:white;}
 .m-row-inline{display:flex;gap:8px;}
 .m-row-inline>*{flex:1;}
 
 /* Toast */
-#toast{position:fixed;bottom:18px;right:18px;background:#1b2b3c;color:white;padding:9px 15px;border-radius:6px;font-size:12.5px;z-index:300;opacity:0;transition:opacity .25s;pointer-events:none;}
-#toast.show{opacity:1;}
+#toast{position:fixed;bottom:20px;right:20px;background:#1a2333;color:white;padding:10px 16px;border-radius:8px;font-size:12.5px;font-weight:500;z-index:300;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;transform:translateY(6px);}
+#toast.show{opacity:1;transform:translateY(0);}
 
 /* Scrollbars */
-::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:#2d4c67;border-radius:3px;}
+::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.2);}
+#content ::-webkit-scrollbar-thumb{background:#cbd5e1;}
 </style>
 </head>
 <body>
 
 <!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
 <div id="sidebar">
-  <div id="sidebar-title">📊 Data Analysis Studio</div>
+  <div id="sidebar-title"><span>◈</span> Data Analysis Studio</div>
 
   <!-- DATA -->
   <div class="s-sec">
@@ -158,12 +185,12 @@ input[type=checkbox]{accent-color:#1558a3;width:13px;height:13px;cursor:pointer;
       <span>Data</span><span class="arr open" id="arr-data">▶</span>
     </div>
     <div class="s-sec-body" id="ds-data">
-      <label class="upload-zone" for="file-inp">📁 Import CSV or Excel</label>
+      <label class="upload-zone" for="file-inp">↑ Import CSV or Excel</label>
       <input type="file" id="file-inp" accept=".csv,.xlsx,.xls" style="display:none">
       <div class="file-badge" id="file-badge">No file loaded</div>
       <div id="sheet-row" style="display:none;margin-top:6px;">
-        <div class="cfg-lbl" style="color:#4a7099;">Sheet</div>
-        <select class="cfg-sel" id="sheet-sel" style="background:white;color:#1a2a3a;border-color:#bdd0e4;"></select>
+        <div class="cfg-lbl" style="color:var(--sb-dim);">Sheet</div>
+        <select class="cfg-sel gs-sel" id="sheet-sel"></select>
       </div>
       <div style="margin-top:8px;display:flex;gap:6px;">
         <button class="btn-sm" id="preview-btn" onclick="togglePreview()" disabled>Preview</button>
@@ -175,129 +202,132 @@ input[type=checkbox]{accent-color:#1558a3;width:13px;height:13px;cursor:pointer;
   <!-- COLUMNS -->
   <div class="s-sec">
     <div class="s-sec-hdr" onclick="toggleSec('ds-cols','arr-cols')">
-      <span>Columns <span id="col-count" style="font-size:10px;color:#4a7099;"></span></span>
+      <span>Columns <span id="col-count" style="font-size:9.5px;color:var(--sb-dim);"></span></span>
       <span class="arr" id="arr-cols">▶</span>
     </div>
     <div class="s-sec-body hidden" id="ds-cols">
-      <div id="col-list"><div style="font-size:11px;color:#4a7099;">Load a file to see columns</div></div>
+      <div id="col-list"><div style="font-size:11px;color:var(--sb-dim);">Load a file to see columns</div></div>
     </div>
   </div>
 
   <!-- FILTERS -->
   <div class="s-sec">
     <div class="s-sec-hdr" onclick="toggleSec('ds-filt','arr-filt')">
-      <span>Filters <span id="filt-count" style="font-size:10px;color:#4a7099;"></span></span>
+      <span>Filters <span id="filt-count" style="font-size:9.5px;color:var(--sb-dim);"></span></span>
       <span class="arr" id="arr-filt">▶</span>
     </div>
     <div class="s-sec-body hidden" id="ds-filt">
       <div id="filt-chips"></div>
       <button class="add-filter-btn" id="add-filt-btn" onclick="openFilterModal(null)" disabled>+ Add filter</button>
 
-      <!-- ── RANGE ANALYSIS ── -->
-      <div style="margin-top:10px;border-top:1px solid #dde3ea;padding-top:10px;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#4a7099;margin-bottom:7px;">📊 Range Analysis</div>
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <div>
-            <div class="cfg-lbl" style="color:#4a7099;margin-bottom:2px;">Metric</div>
-            <select class="cfg-sel" id="rf-metric" style="background:white;color:#1a2a3a;border-color:#bdd0e4;font-size:11.5px;padding:4px 6px;"></select>
-          </div>
-          <div style="display:flex;gap:5px;align-items:flex-end;">
-            <div style="flex:1;">
-              <div class="cfg-lbl" style="color:#4a7099;margin-bottom:2px;">Condition</div>
-              <select class="cfg-sel" id="rf-op" onchange="rfOpChange()" style="background:white;color:#1a2a3a;border-color:#bdd0e4;font-size:11px;padding:4px 5px;">
-                <option value="none">(all)</option>
-                <option value="gt">&gt;</option><option value="gte">≥</option>
-                <option value="lt">&lt;</option><option value="lte">≤</option>
-                <option value="eq">= ±tol</option><option value="between">between</option>
-              </select>
-            </div>
-            <div style="flex:1;">
-              <div class="cfg-lbl" style="color:#4a7099;margin-bottom:2px;">Value A</div>
-              <input type="number" id="rf-va" value="0" style="width:100%;padding:4px 5px;background:white;color:#1a2a3a;border:1px solid #bdd0e4;border-radius:4px;font-size:11px;">
-            </div>
-          </div>
-          <div style="display:flex;gap:5px;" id="rf-extra-row">
-            <div style="flex:1;" id="rf-vb-w" hidden>
-              <div class="cfg-lbl" style="color:#4a7099;margin-bottom:2px;">Value B</div>
-              <input type="number" id="rf-vb" value="0" style="width:100%;padding:4px 5px;background:white;color:#1a2a3a;border:1px solid #bdd0e4;border-radius:4px;font-size:11px;">
-            </div>
-            <div style="flex:1;" id="rf-tol-w" hidden>
-              <div class="cfg-lbl" style="color:#4a7099;margin-bottom:2px;">± Tol</div>
-              <input type="number" id="rf-tol" value="0.5" style="width:100%;padding:4px 5px;background:white;color:#1a2a3a;border:1px solid #bdd0e4;border-radius:4px;font-size:11px;">
-            </div>
-          </div>
-          <div>
-            <div class="cfg-lbl" style="color:#4a7099;margin-bottom:2px;">Variables to compare</div>
-            <select id="rf-vars" multiple style="width:100%;height:72px;background:white;color:#1a2a3a;border:1px solid #bdd0e4;border-radius:4px;font-size:11px;padding:2px;"></select>
-          </div>
-          <div style="display:flex;gap:5px;align-items:flex-end;">
-            <div style="flex:1;">
-              <div class="cfg-lbl" style="color:#4a7099;margin-bottom:2px;">Chart</div>
-              <select id="rf-chart" style="width:100%;padding:4px 5px;background:white;color:#1a2a3a;border:1px solid #bdd0e4;border-radius:4px;font-size:11px;">
-                <option value="box">Box</option><option value="violin">Violin</option><option value="hist">Histogram</option>
-              </select>
-            </div>
-            <button onclick="runRangeFilter()" id="rf-btn" disabled
-              style="flex:1;padding:5px 8px;background:#1558a3;color:white;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
-              ▶ Analyze
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 
   <!-- CHART TYPE -->
-  <div class="s-sec" style="border-bottom:none;flex:1;">
+  <div class="s-sec">
     <div class="s-sec-hdr" onclick="toggleSec('ds-charts','arr-charts')">
       <span>Chart Type</span><span class="arr open" id="arr-charts">▶</span>
     </div>
     <div class="s-sec-body" id="ds-charts">
-      <div class="ctab active" onclick="selectChart('scatter2d')" id="ctab-scatter2d"><span class="ti">📊</span>2D Scatter</div>
-      <div class="ctab" onclick="selectChart('scatter3d')" id="ctab-scatter3d"><span class="ti">🧊</span>3D Scatter</div>
-      <div class="ctab" onclick="selectChart('corr')" id="ctab-corr"><span class="ti">🔗</span>Correlation Matrix</div>
-      <div class="ctab" onclick="selectChart('kde')" id="ctab-kde"><span class="ti">〰️</span>KDE Density</div>
-      <div class="ctab" onclick="selectChart('single')" id="ctab-single"><span class="ti">📦</span>Single Metric</div>
-      <div class="ctab" onclick="selectChart('line')" id="ctab-line"><span class="ti">📈</span>Line Plot</div>
+      <div class="ctab active" onclick="selectChart('scatter2d')" id="ctab-scatter2d"><span class="ti">◎</span>2D Scatter</div>
+      <div class="ctab" onclick="selectChart('scatter3d')" id="ctab-scatter3d"><span class="ti">◈</span>3D Scatter</div>
+      <div class="ctab" onclick="selectChart('corr')" id="ctab-corr"><span class="ti">⊞</span>Correlation Matrix</div>
+      <div class="ctab" onclick="selectChart('kde')" id="ctab-kde"><span class="ti">∿</span>KDE Density</div>
+      <div class="ctab" onclick="selectChart('single')" id="ctab-single"><span class="ti">▭</span>Single Metric</div>
+      <div class="ctab" onclick="selectChart('line')" id="ctab-line"><span class="ti">∕</span>Line Plot</div>
       <div class="ctab" onclick="selectChart('parcoords')" id="ctab-parcoords"><span class="ti">⊟</span>Parallel Coords</div>
+      <div class="ctab" onclick="selectChart('rangefilter')" id="ctab-rangefilter"><span class="ti">◫</span>Range Analysis</div>
+    </div>
+  </div>
+
+  <!-- STYLE CONFIG -->
+  <div class="s-sec" style="border-bottom:none;flex:1;">
+    <div class="s-sec-hdr" onclick="toggleSec('ds-style','arr-style')">
+      <span>Chart Style</span><span class="arr" id="arr-style">▶</span>
+    </div>
+    <div class="s-sec-body hidden" id="ds-style">
+      <div class="gs-row">
+        <div class="gs-lbl">Size scale</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="range" id="gs-sc" min="0.35" max="1.5" step="0.05" value="1.0" oninput="gsLive(this.value)" style="flex:1;accent-color:var(--acc);">
+          <span id="gs-sc-val" class="gs-val">1.0</span>
+        </div>
+      </div>
+      <div class="gs-row">
+        <div class="gs-lbl">Font</div>
+        <select class="gs-sel" id="gs-font" onchange="gsApply()">
+          <option value="Inter,system-ui,sans-serif">Inter (default)</option>
+          <option value="system-ui,sans-serif">System UI</option>
+          <option value="Georgia,serif">Georgia</option>
+          <option value="'Courier New',monospace">Monospace</option>
+        </select>
+      </div>
+      <div class="gs-row">
+        <div class="gs-lbl">Label size</div>
+        <select class="gs-sel" id="gs-fsize" onchange="gsApply()">
+          <option value="10">10 px</option>
+          <option value="11">11 px</option>
+          <option value="12" selected>12 px</option>
+          <option value="13">13 px</option>
+          <option value="14">14 px</option>
+        </select>
+      </div>
+      <div class="gs-row">
+        <div class="gs-lbl">Line width</div>
+        <select class="gs-sel" id="gs-lw" onchange="gsApply()">
+          <option value="1.2">Thin</option>
+          <option value="2.2" selected>Normal</option>
+          <option value="3.2">Thick</option>
+        </select>
+      </div>
+      <div class="gs-row">
+        <div class="gs-lbl">Marker size</div>
+        <select class="gs-sel" id="gs-ms" onchange="gsApply()">
+          <option value="4">Small</option>
+          <option value="7" selected>Normal</option>
+          <option value="11">Large</option>
+        </select>
+      </div>
+      <div class="gs-row">
+        <div class="gs-lbl">Accent color</div>
+        <input type="color" id="gs-accent" value="#1f77b4" onchange="gsApply()" style="width:100%;height:28px;border:1px solid var(--sb-border);border-radius:5px;background:none;cursor:pointer;padding:1px;">
+      </div>
+      <div class="gs-row">
+        <div class="gs-lbl">Margins</div>
+        <select class="gs-sel" id="gs-margins" onchange="gsApply()">
+          <option value="tight">Tight</option>
+          <option value="normal" selected>Normal</option>
+          <option value="generous">Generous</option>
+        </select>
+      </div>
+      <div class="gs-row">
+        <div class="cfg-chk" style="margin:0;">
+          <input type="checkbox" id="gs-grid" onchange="gsApply()">
+          <label for="gs-grid" style="font-size:11.5px;color:var(--sb-text);">Show grid lines</label>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
 <div id="main">
-  <div id="mhdr">
-    <button id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle sidebar (S)"
-      style="flex-shrink:0;background:#f0f4f8;border:1px solid #d0dae4;border-radius:5px;padding:5px 9px;cursor:pointer;font-size:13px;color:#6b7e8d;transition:all .15s;"
-      onmouseover="this.style.background='#dde8f2'" onmouseout="this.style.background='#f0f4f8'">◀</button>
-    <div>
-      <h2 id="mhdr-title">2D Scatter Plot</h2>
-      <div class="sub" id="mhdr-sub">Load a file, then select axes and generate</div>
-    </div>
-    <div class="stats" id="mhdr-stats"></div>
-  </div>
-
   <div id="content">
 
     <!-- ── CONFIG PANEL ── -->
     <div id="cfg-panel">
       <div id="cfg-panel-hdr" onclick="toggleCfg()">
-        <span id="cfg-panel-label">Configure 2D Scatter</span>
-        <div style="display:flex;align-items:center;gap:12px;margin-left:auto;margin-right:8px;" onclick="event.stopPropagation()">
-          <div style="display:flex;align-items:center;gap:5px;">
-            <label style="font-size:10.5px;font-weight:600;color:#6b7e8d;white-space:nowrap;">Título / ejes</label>
-            <input type="number" id="chart-fontsize" value="12" min="8" max="28" step="1"
-              style="width:48px;padding:2px 5px;border:1px solid #dde3ea;border-radius:4px;font-size:11px;color:#1a2a3a;background:white;"
-              title="Tamaño del título y etiquetas de ejes">
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;">
-            <label style="font-size:10.5px;font-weight:600;color:#6b7e8d;white-space:nowrap;">Ticks / valores</label>
-            <input type="number" id="chart-ticksize" value="10" min="6" max="22" step="1"
-              style="width:48px;padding:2px 5px;border:1px solid #dde3ea;border-radius:4px;font-size:11px;color:#1a2a3a;background:white;"
-              title="Tamaño de los números en los ejes, valores dentro de la matriz de correlación y etiquetas del parallel coordinates">
+        <button id="sidebar-toggle-btn" onclick="event.stopPropagation();toggleSidebar()" title="Toggle sidebar (S)">◀</button>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:baseline;gap:10px;">
+            <h2 id="mhdr-title" style="font-size:15px;font-weight:700;color:var(--tx);letter-spacing:-.2px;line-height:1;">2D Scatter Plot</h2>
+            <span id="mhdr-sub" style="font-size:11.5px;color:var(--tx-dim);line-height:1;">Load a file, then select axes and generate</span>
           </div>
         </div>
-        <button id="cfg-toggle">▲ Hide config</button>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <div class="stats" id="mhdr-stats"></div>
+          <button id="cfg-toggle">▲ Hide config</button>
+        </div>
       </div>
       <div id="cfg-body">
 
@@ -442,6 +472,42 @@ input[type=checkbox]{accent-color:#1558a3;width:13px;height:13px;cursor:pointer;
       </div>
 
 
+      <!-- RANGE ANALYSIS -->
+      <div id="cfg-rangefilter" style="display:none">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:170px;display:flex;flex-direction:column;gap:7px;">
+            <div class="cfg-g"><div class="cfg-lbl">Metric (OUT) *</div><select class="cfg-sel" id="rf-metric"></select></div>
+            <div class="cfg-g">
+              <div class="cfg-lbl">Condition</div>
+              <select class="cfg-sel" id="rf-op" onchange="rfOpChange()">
+                <option value="none">(all rows)</option>
+                <option value="gt">&gt;</option><option value="gte">≥</option>
+                <option value="lt">&lt;</option><option value="lte">≤</option>
+                <option value="eq">= ± tolerance</option><option value="between">between A and B</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <div class="cfg-g" style="flex:1;"><div class="cfg-lbl">Value A</div><input type="number" class="cfg-inp" id="rf-va" value="0"></div>
+              <div class="cfg-g" style="flex:1;" id="rf-vb-w" hidden><div class="cfg-lbl">Value B</div><input type="number" class="cfg-inp" id="rf-vb" value="0"></div>
+              <div class="cfg-g" style="flex:1;" id="rf-tol-w" hidden><div class="cfg-lbl">± Tolerance</div><input type="number" class="cfg-inp" id="rf-tol" value="0.5"></div>
+            </div>
+          </div>
+          <div style="flex:1;min-width:170px;display:flex;flex-direction:column;gap:7px;">
+            <div class="cfg-g">
+              <div class="cfg-lbl">Variables to compare (IN) — multi-select</div>
+              <select class="cfg-sel multi-sel" id="rf-vars" multiple style="height:110px;"></select>
+            </div>
+            <div class="cfg-g">
+              <div class="cfg-lbl">Chart type</div>
+              <select class="cfg-sel" id="rf-chart">
+                <option value="box">Box plot</option><option value="violin">Violin</option><option value="hist">Histogram</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <button class="btn-gen" onclick="generateChart()">▶ Generate Chart</button>
+      </div>
+
       </div><!-- end cfg-body -->
     </div><!-- end cfg-panel -->
 
@@ -451,11 +517,12 @@ input[type=checkbox]{accent-color:#1558a3;width:13px;height:13px;cursor:pointer;
       <div id="chart-placeholder">
         <div class="ph-ico">📊</div>
         <p>Load a file and press "Generate Chart"</p>
-        <p class="ph2">Supports CSV and Excel (.xlsx) · Columns with in: / out: prefixes are auto-detected</p>
+        <p class="ph2">Supports CSV and Excel (.xlsx) · Optional in: / out: column prefixes are auto-detected</p>
       </div>
       <div id="chart-inner">
         <div id="plotly-out"></div>
         <div id="corr-legend"></div>
+        <div id="scatter-legend"></div>
       </div>
     </div>
 
@@ -565,9 +632,11 @@ function getFiltered(){
 
 // Palettes matching notebook (tab10 = seaborn default)
 const PAL = {
-  tab10: ['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'],
-  set2:  ['#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854','#ffd92f','#e5c494','#b3b3b3'],
-  pastel:['#aec6cf','#ffd1dc','#b5ead7','#ffdac1','#e2f0cb','#c7ceea','#f0e6ef','#ffe4e1'],
+  tab10:  ['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'],
+  set2:   ['#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854','#ffd92f','#e5c494','#b3b3b3'],
+  pastel: ['#aec6cf','#ffd1dc','#b5ead7','#ffdac1','#e2f0cb','#c7ceea','#f0e6ef','#ffe4e1'],
+  viridis:['#440154','#482777','#3e4989','#31688e','#26828e','#1f9e89','#35b779','#6ece58','#b5de2b','#fde725'],
+  plasma: ['#0d0887','#47039f','#7301a8','#9c179e','#bd3786','#d8576b','#ed7953','#fb9f3a','#fdcf18','#f0f921'],
 };
 function palette(name,n){
   const p=PAL[name]||PAL.tab10;
@@ -576,32 +645,32 @@ function palette(name,n){
 
 // ─── Seaborn "ticks" style base layout ───
 // White background, no gridlines, visible axis spines + ticks (like sns.set_theme(style='ticks'))
-function chartFS(){return Math.max(8,+(document.getElementById('chart-fontsize')?.value||12));}
-function chartTS(){return Math.max(6,+(document.getElementById('chart-ticksize')?.value||10));}
 function BL(title=''){
-  const fs=chartFS(), ts=chartTS();
+  const mPre={tight:{l:45,r:20,t:38,b:48},normal:{l:72,r:30,t:58,b:72},generous:{l:90,r:45,t:75,b:90}};
+  const m=mPre[GS.margins]||mPre.normal;
+  const gc=GS.gridLines?'#e8edf2':undefined;
   const ax={
-    showgrid:false, zeroline:false,
+    showgrid:GS.gridLines, zeroline:false,
     showline:true, linecolor:'#333', linewidth:1.5,
-    ticks:'outside', ticklen:5, tickwidth:1.2, tickcolor:'#333',
-    tickfont:{size:ts,color:'#222',family:'system-ui,sans-serif'},
-    showspikes:false,
+    ticks:'outside', ticklen:5, tickwidth:1.2, tickcolor:'#444',
+    tickfont:{size:GS.fontSize,color:'#333',family:GS.fontFamily},
+    gridcolor:gc, showspikes:false,
   };
   return {
-    title:{text:title,font:{size:fs,color:'#1a1a1a',family:'system-ui,sans-serif'},x:0.5,xanchor:'center'},
+    title:{text:title,font:{size:GS.titleSize,color:'#111',family:GS.fontFamily},x:0.5,xanchor:'center'},
     paper_bgcolor:'white', plot_bgcolor:'white',
-    font:{family:'system-ui,sans-serif',size:12,color:'#222'},
-    margin:{l:72,r:30,t:58,b:72},
+    font:{family:GS.fontFamily,size:GS.fontSize,color:'#222'},
+    margin:m,
     xaxis:{...ax}, yaxis:{...ax},
   };
 }
-// Axis with label
 function AX(title,extra={}){
-  const fs=chartFS(), ts=chartTS();
-  return{showgrid:false,zeroline:false,showline:true,linecolor:'#333',linewidth:1.5,
-    ticks:'outside',ticklen:5,tickwidth:1.2,tickcolor:'#333',
-    tickfont:{size:ts,color:'#222'},
-    title:{text:title,font:{size:fs,color:'#222'}},
+  const gc=GS.gridLines?'#e8edf2':undefined;
+  return{showgrid:GS.gridLines,zeroline:false,showline:true,linecolor:'#333',linewidth:1.5,
+    ticks:'outside',ticklen:5,tickwidth:1.2,tickcolor:'#444',
+    tickfont:{size:GS.fontSize,color:'#333',family:GS.fontFamily},
+    gridcolor:gc,
+    title:{text:title,font:{size:GS.fontSize+1,color:'#222',family:GS.fontFamily}},
     ...extra};
 }
 
@@ -610,24 +679,14 @@ document.getElementById('file-inp').addEventListener('change',function(e){
   const f=e.target.files[0]; if(!f) return;
   S.fileName=f.name;
   if(f.name.match(/\.csv$/i)){
-    Papa.parse(f,{
-      header:true, dynamicTyping:true, skipEmptyLines:true,
-      worker:false,  // avoid HTTP worker issues
-      // normalize all line-ending variants (\r\n, \r) to \n before parsing
-      beforeFirstChunk: chunk => chunk.replace(/\r\n/g,'\n').replace(/\r/g,'\n'),
-      complete:r=>{
-        const clean=r.data.map(row=>{
-          const o={...row};
-          delete o.__parsed_extra;
-          // PapaParse converts 'False'/'True' to booleans; restore as strings so filters work
-          for(const k of Object.keys(o)){
-            if(o[k]===true) o[k]='True';
-            else if(o[k]===false) o[k]='False';
-          }
-          return o;
-        });
-        onData(clean,f.name);
-      }});
+    // Normalize mixed line endings before parsing (e.g. \r\n + \n in same file)
+    const _fr=new FileReader();
+    _fr.onload=ev=>{
+      const text=ev.target.result.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+      const r=Papa.parse(text,{header:true,dynamicTyping:true,skipEmptyLines:true,newline:'\n'});
+      onData(r.data,f.name);
+    };
+    _fr.readAsText(f);
   } else {
     const rd=new FileReader();
     rd.onload=ev=>{
@@ -836,11 +895,7 @@ function updateAllDropdowns(){
   fillSel('s2-x',nc); fillSel('s2-y',nc);
   fillSel('s2-hue',ac,true); fillSel('s2-size',nc,true); fillSel('s2-sym',ac,true);
   if(nc.length>1){setVal('s2-x',numMetCols[0]||nc[0]);setVal('s2-y',numMetCols[1]||nc[1]);}
-  // Only auto-set hue to a categorical variable — numeric variables create too many traces
-  if(S.variables.length){
-    const catVar=S.variables.find(c=>S.types[c]==='categorical');
-    if(catVar) setVal('s2-hue',catVar);
-  }
+  if(S.variables.length){setVal('s2-hue',S.variables[0]);}
 
   // 3D Scatter
   fillSel('s3-x',nc);fillSel('s3-y',nc);fillSel('s3-z',nc);fillSel('s3-hue',ac,true);fillSel('s3-size',nc,true);
@@ -859,12 +914,12 @@ function updateAllDropdowns(){
   const kdeEl=document.getElementById('kde-metrics');
   if(kdeEl){const toSel=S.metrics.length?S.metrics.filter(c=>S.types[c]==='numeric'):nc;Array.from(kdeEl.options).forEach(o=>o.selected=toSel.includes(o.value));}
   fillSel('kde-cvar', S.variables.length ? S.variables : ac);
-  {const catVar=S.variables.find(c=>S.types[c]==='categorical');if(catVar)setVal('kde-cvar',catVar);else if(S.variables.length)setVal('kde-cvar',S.variables[0]);}
+  if(S.variables.length) setVal('kde-cvar', S.variables[0]);
 
   // Single Metric
   fillSel('sm-metric', S.metrics.length ? S.metrics.filter(c=>S.types[c]==='numeric') : nc);
   fillSel('sm-group', S.variables.length ? S.variables : ac, true);
-  {const catVar=S.variables.find(c=>S.types[c]==='categorical');if(catVar)setVal('sm-group',catVar);else if(S.variables.length)setVal('sm-group',S.variables[0]);}
+  if(S.variables.length) setVal('sm-group', S.variables[0]);
 
   // Line Plot
   fillSel('lp-x',ac);fillSel('lp-y',nc);fillSel('lp-hue',ac,true);
@@ -887,8 +942,6 @@ function updateAllDropdowns(){
     const toSel=S.variables.filter(c=>S.types[c]==='numeric');
     Array.from(rfVarsEl.options).forEach(o=>o.selected=toSel.includes(o.value));
   }
-  document.getElementById('rf-btn').disabled=false;
-
   // Filter modal column list
   fillSel('fm-col',ac);
 }
@@ -901,15 +954,6 @@ function toggleSec(bodyId,arrId){
 }
 
 // ═══════════════════════ CHART SELECTION ═══════════════════════
-// ═══════════════════════ RANGE ANALYSIS (sidebar) ═══════════════════════
-function runRangeFilter(){
-  if(!S.rawData.length){toast('⚠️ Load a file first');return;}
-  const data=getFiltered();
-  document.getElementById('chart-placeholder').style.display='none';
-  const out=document.getElementById('plotly-out');
-  out.style.display='flex'; out.style.width=''; out.style.height='';
-  try{ chartRangeFilter(data); }catch(e){toast('⚠️ '+e.message);console.error(e);}
-}
 
 // ═══════════════════════ SIDEBAR + CONFIG TOGGLES ═══════════════════════
 let sidebarOpen=true;
@@ -937,23 +981,23 @@ function toggleCfg(){
 
 const CHART_META={
   scatter2d:['2D Scatter Plot','X vs Y with optional color, size, and marker shape'],
-  scatter3d:['3D Scatter Plot','X, Y, Z axes with optional color encoding'],
+  scatter3d:['3D Scatter Plot','X, Y, Z with optional color encoding'],
   corr:['Correlation Matrix','Pairwise Pearson correlations between numeric columns'],
-  kde:['KDE Density Plots','Kernel density estimates per metric, grouped by a variable'],
-  single:['Single Metric Analysis','Box, violin, strip, bar or ECDF for one metric'],
+  kde:['KDE Density','Kernel density estimates per metric, grouped by a variable'],
+  single:['Single Metric','Box, violin, strip, bar or ECDF per metric'],
   line:['Line Plot','Trends and evolution along X axis'],
   parcoords:['Parallel Coordinates','Compare multiple axes simultaneously; drag to filter'],
+  rangefilter:['Range Analysis','Filter rows by a threshold and compare distributions'],
 };
 function selectChart(type){
   document.querySelectorAll('.ctab').forEach(t=>t.classList.remove('active'));
   document.getElementById(`ctab-${type}`).classList.add('active');
-  ['scatter2d','scatter3d','corr','kde','single','line','parcoords'].forEach(t=>{
+  ['scatter2d','scatter3d','corr','kde','single','line','parcoords','rangefilter'].forEach(t=>{
     document.getElementById(`cfg-${t}`).style.display=t===type?'block':'none';
   });
   const [title,sub]=CHART_META[type]||[type,''];
   document.getElementById('mhdr-title').textContent=title;
   document.getElementById('mhdr-sub').textContent=sub;
-  document.getElementById('cfg-panel-label').textContent='Configure: '+title;
   // Re-open config when switching chart type
   if(!cfgOpen) toggleCfg();
   S.currentChart=type;
@@ -979,9 +1023,36 @@ function rfOpChange(){
 }
 
 // ═══════════════════════ CHART GENERATOR ═══════════════════════
-const CFG={responsive:false,displayModeBar:true,modeBarButtonsToRemove:['select2d','lasso2d'],displaylogo:false,
-  toImageButtonOptions:{format:'png',scale:4}};
-const SC=0.65; // base size factor vs original notebook sizes
+const CFG={responsive:false,displayModeBar:true,modeBarButtonsToRemove:['select2d','lasso2d'],displaylogo:false,toImageButtonOptions:{scale:3}};
+// ═══════════════════════ GLOBAL STYLE ═══════════════════════
+const GS = {
+  sc: 1.0,
+  fontFamily: 'Inter,system-ui,sans-serif',
+  fontSize: 12,
+  titleSize: 14,
+  lineWidth: 2.2,
+  markerSize: 7,
+  accentColor: '#1f77b4',
+  margins: 'normal',
+  gridLines: false,
+};
+function gsLive(val){
+  GS.sc=parseFloat(val);
+  document.getElementById('gs-sc-val').textContent=parseFloat(val).toFixed(2).replace(/\.?0+$/,'');
+}
+function gsApply(){
+  GS.sc=parseFloat(document.getElementById('gs-sc').value);
+  GS.fontFamily=document.getElementById('gs-font').value;
+  GS.fontSize=parseInt(document.getElementById('gs-fsize').value);
+  GS.titleSize=GS.fontSize+2;
+  GS.lineWidth=parseFloat(document.getElementById('gs-lw').value);
+  GS.markerSize=parseInt(document.getElementById('gs-ms').value);
+  GS.accentColor=document.getElementById('gs-accent').value;
+  GS.margins=document.getElementById('gs-margins').value;
+  GS.gridLines=document.getElementById('gs-grid').checked;
+  if(document.getElementById('plotly-out').style.display!=='none'&&S.rawData.length) generateChart();
+}
+const SC = {valueOf(){return GS.sc;}}; // legacy shim — use GS.sc directly in new code
 
 // After each render: CSS scale the chart so it fits entirely in the panel viewport
 function fitChart(){
@@ -1019,9 +1090,7 @@ function setChartTitle(txt){
 
 // Wrapper: render + fit
 function plotChart(traces,layout){
-  return Plotly.react('plotly-out',traces,layout,CFG)
-    .then(()=>requestAnimationFrame(fitChart))
-    .catch(e=>{toast('⚠️ Chart error: '+e.message);console.error('Plotly error:',e);});
+  return Plotly.react('plotly-out',traces,layout,CFG).then(()=>requestAnimationFrame(fitChart));
 }
 
 function generateChart(){
@@ -1030,6 +1099,7 @@ function generateChart(){
   if(!data.length){toast('⚠️ No data after filters');return;}
   document.getElementById('chart-placeholder').style.display='none';
   document.getElementById('corr-legend').style.display='none';
+  document.getElementById('scatter-legend').style.display='none';
   const out=document.getElementById('plotly-out');
   out.style.display='flex'; out.style.width=''; out.style.height='';
   try{
@@ -1041,48 +1111,103 @@ function generateChart(){
       case 'single':      chartSingle(data); break;
       case 'line':        chartLine(data); break;
       case 'parcoords':   chartParCoords(data); break;
+      case 'rangefilter': chartRangeFilter(data); break;
     }
   }catch(e){toast('⚠️ Error: '+e.message);console.error(e);}
 }
 
 // ── 2D SCATTER ──
+// SVG symbols for scatter legend (matches Plotly marker symbols)
+const SYM_SVG = {
+  'circle':       (c,r)=>`<svg width="14" height="14"><circle cx="7" cy="7" r="${r||5}" fill="${c}" stroke="#444" stroke-width=".8"/></svg>`,
+  'square':       (c,r)=>`<svg width="14" height="14"><rect x="${7-(r||5)}" y="${7-(r||5)}" width="${(r||5)*2}" height="${(r||5)*2}" fill="${c}" stroke="#444" stroke-width=".8"/></svg>`,
+  'diamond':      (c,r)=>`<svg width="14" height="14"><polygon points="7,${7-(r||5)} ${7+(r||5)},7 7,${7+(r||5)} ${7-(r||5)},7" fill="${c}" stroke="#444" stroke-width=".8"/></svg>`,
+  'triangle-up':  (c,r)=>`<svg width="14" height="14"><polygon points="7,${7-(r||5)} ${7+(r||5)},${7+(r||4)} ${7-(r||5)},${7+(r||4)}" fill="${c}" stroke="#444" stroke-width=".8"/></svg>`,
+  'cross':        (c,r)=>`<svg width="14" height="14"><line x1="7" y1="${7-(r||5)}" x2="7" y2="${7+(r||5)}" stroke="${c}" stroke-width="2.5"/><line x1="${7-(r||5)}" y1="7" x2="${7+(r||5)}" y2="7" stroke="${c}" stroke-width="2.5"/></svg>`,
+  'pentagon':     (c,r)=>{const pts=[0,1,2,3,4].map(i=>{const a=-Math.PI/2+i*2*Math.PI/5;return `${7+(r||5)*Math.cos(a)},${7+(r||5)*Math.sin(a)}`;}).join(' ');return`<svg width="14" height="14"><polygon points="${pts}" fill="${c}" stroke="#444" stroke-width=".8"/></svg>`;},
+  'star':         (c,r)=>{const pts=[0,1,2,3,4].flatMap(i=>{const ao=-Math.PI/2+i*2*Math.PI/5,ai=ao+Math.PI/5;const ro=(r||5),ri=ro*.4;return[`${7+ro*Math.cos(ao)},${7+ro*Math.sin(ao)}`,`${7+ri*Math.cos(ai)},${7+ri*Math.sin(ai)}`];}).join(' ');return`<svg width="14" height="14"><polygon points="${pts}" fill="${c}" stroke="#444" stroke-width=".8"/></svg>`;},
+  'hexagon':      (c,r)=>{const pts=[0,1,2,3,4,5].map(i=>{const a=i*Math.PI/3;return`${7+(r||5)*Math.cos(a)},${7+(r||5)*Math.sin(a)}`;}).join(' ');return`<svg width="14" height="14"><polygon points="${pts}" fill="${c}" stroke="#444" stroke-width=".8"/></svg>`;},
+};
+function symSVG(sym,color='#555',r){return (SYM_SVG[sym]||SYM_SVG['circle'])(color,r);}
+
+function buildScatterLegend(hc,syc,sc,hueCats,hueCols,symList,symCats,szMin,szMax){
+  const el=document.getElementById('scatter-legend');
+  const hasAny=!!(hc||syc||sc);
+  if(!hasAny){el.style.display='none';el.innerHTML='';return;}
+  let html='';
+  if(hc){
+    html+=`<div class="sl-sec"><div class="sl-title">${dn(hc)}</div>`;
+    hueCats.forEach((cat,i)=>{
+      html+=`<div class="sl-row">${symSVG('circle',hueCols[i])}<span class="sl-lbl">${cat}</span></div>`;
+    });
+    html+='</div>';
+  }
+  if(syc){
+    html+=`<div class="sl-sec"><div class="sl-title">${dn(syc)}</div>`;
+    symCats.forEach((cat,i)=>{
+      html+=`<div class="sl-row">${symSVG(symList[i%symList.length],'#555')}<span class="sl-lbl">${cat}</span></div>`;
+    });
+    html+='</div>';
+  }
+  if(sc){
+    const mid=(szMin+szMax)/2;
+    const fmt=v=>isFinite(v)?v.toPrecision(3):String(v);
+    html+=`<div class="sl-sec"><div class="sl-title">${dn(sc)}</div>`;
+    // Fixed visual radii: 4 / 7 / 11 px — clearly small/medium/large
+    [[szMin,4],[mid,7],[szMax,11]].forEach(([val,r])=>{
+      const d=r*2+2;
+      const circ=`<svg width="${d}" height="${d}" style="flex-shrink:0"><circle cx="${d/2}" cy="${d/2}" r="${r}" fill="#555" stroke="#333" stroke-width=".8"/></svg>`;
+      html+=`<div class="sl-row" style="align-items:center;min-height:${d}px">${circ}<span class="sl-lbl">${fmt(val)}</span></div>`;
+    });
+    html+='</div>';
+  }
+  el.innerHTML=html;
+  el.style.display='flex';
+}
+
 function chart2D(data){
   const xc=document.getElementById('s2-x').value;
   const yc=document.getElementById('s2-y').value;
   const hc=document.getElementById('s2-hue').value||null;
   const sc=document.getElementById('s2-size').value||null;
   const syc=document.getElementById('s2-sym').value||null;
+  const pal=document.getElementById('s2-pal').value;
   if(!xc||!yc){toast('⚠️ Select X and Y');return;}
-  const xv=data.map(r=>toNum(r[xc]));
-  const yv=data.map(r=>toNum(r[yc]));
   const symList=['circle','square','diamond','triangle-up','cross','pentagon','star','hexagon'];
-  let traces=[];
 
-  if(hc){
-    const cats=[...new Set(data.map(r=>String(r[hc]??'N/A')))].sort((a,b)=>{
-      const na=Number(a),nb=Number(b);return(!isNaN(na)&&!isNaN(nb))?na-nb:a.localeCompare(b);
+  const hueCats=hc?[...new Set(data.map(r=>String(r[hc]??'N/A')))].sort((a,b)=>{const na=Number(a),nb=Number(b);return(!isNaN(na)&&!isNaN(nb))?na-nb:a.localeCompare(b);}):null;
+  const symCats=syc?[...new Set(data.map(r=>String(r[syc]??'N/A')))].sort():null;
+  const hueCols=palette(pal, hueCats?hueCats.length:1);
+
+  let szMin=0,szMax=1;
+  if(sc){const raw=data.map(r=>toNum(r[sc])).filter(v=>!isNaN(v));szMin=Math.min(...raw);szMax=Math.max(...raw);}
+  const getSize=r=>{if(!sc)return GS.markerSize;const v=toNum(r[sc]);return isNaN(v)?GS.markerSize:GS.markerSize+(v-szMin)/(szMax-szMin||1)*20;};
+  const getSym=r=>syc?symList[symCats.indexOf(String(r[syc]??'N/A'))%symList.length]:'circle';
+
+  // One trace per hue category (no Plotly legend — using external HTML legend)
+  const traces=[];
+  const hueList=hueCats||[null];
+  hueList.forEach((cat,ci)=>{
+    const subset=cat===null?data:data.filter(r=>String(r[hc]??'N/A')===cat);
+    traces.push({
+      type:'scatter',mode:'markers',
+      name:cat??'',showlegend:false,
+      x:subset.map(r=>toNum(r[xc])),y:subset.map(r=>toNum(r[yc])),
+      marker:{
+        color:hc?hueCols[ci]:GS.accentColor,
+        size:subset.map(getSize),
+        symbol:subset.map(getSym),
+        opacity:.78,line:{color:'rgba(30,30,30,.4)',width:.5}
+      }
     });
-    const cols=palette('tab10',cats.length);
-    const symCats=syc?[...new Set(data.map(r=>String(r[syc]??'')))]:[];
-    traces=cats.map((cat,ci)=>{
-      const idx=data.reduce((a,_,i)=>String(data[i][hc]??'N/A')===cat?[...a,i]:a,[]);
-      const xs=idx.map(i=>xv[i]),ys=idx.map(i=>yv[i]);
-      let sz=8;
-      if(sc){const raw=idx.map(i=>toNum(data[i][sc]));const mn=Math.min(...raw.filter(v=>!isNaN(v))),mx=Math.max(...raw.filter(v=>!isNaN(v)));sz=raw.map(v=>isNaN(v)?7:7+(v-mn)/(mx-mn||1)*20);}
-      const sym=syc?idx.map(i=>symList[symCats.indexOf(String(data[i][syc]??''))%symList.length]):'circle';
-      return{type:'scatter',mode:'markers',name:cat,x:xs,y:ys,
-        marker:{color:cols[ci],size:sz,symbol:sym,opacity:.75,line:{color:'rgba(30,30,30,.5)',width:.5}}};
-    });
-  } else {
-    let sz=8;
-    if(sc){const raw=data.map(r=>toNum(r[sc]));const mn=Math.min(...raw.filter(v=>!isNaN(v))),mx=Math.max(...raw.filter(v=>!isNaN(v)));sz=raw.map(v=>isNaN(v)?7:7+(v-mn)/(mx-mn||1)*20);}
-    traces=[{type:'scatter',mode:'markers',x:xv,y:yv,
-      marker:{color:'#1f77b4',size:sz,opacity:.75,line:{color:'rgba(30,30,30,.5)',width:.5}}}];
-  }
+  });
+
+  buildScatterLegend(hc,syc,sc,hueCats,hueCols,symList,symCats,szMin,szMax);
+
   const L={...BL(`${dn(yc)} vs ${dn(xc)}`),
-    width:Math.round(1000*SC), height:Math.round(600*SC),
+    width:Math.round(1000*GS.sc), height:Math.round(600*GS.sc),
     xaxis:AX(dn(xc)), yaxis:AX(dn(yc)),
-    showlegend:!!hc, legend:{x:1.02,y:1,xanchor:'left',bgcolor:'rgba(255,255,255,0.9)',bordercolor:'#ccc',borderwidth:1,font:{size:11}}};
+    showlegend:false};
   plotChart(traces,L);
 }
 
@@ -1101,16 +1226,16 @@ function chart3D(data){
       const idx=data.reduce((a,_,i)=>String(data[i][hc]??'N/A')===cat?[...a,i]:a,[]);
       return{type:'scatter3d',mode:'markers',name:cat,
         x:idx.map(i=>xv[i]),y:idx.map(i=>yv[i]),z:idx.map(i=>zv[i]),
-        marker:{color:cols[ci],size:4,opacity:.75,line:{width:0}}};
+        marker:{color:cols[ci],size:Math.max(3,GS.markerSize-2),opacity:.78,line:{width:0}}};
     });
   } else {
     traces=[{type:'scatter3d',mode:'markers',x:xv,y:yv,z:zv,
-      marker:{color:zv,colorscale:cmap,size:4,opacity:.75,showscale:true,
-        colorbar:{thickness:14,len:.75,title:{text:dn(zc),side:'right'},tickfont:{size:10}}}}];
+      marker:{color:zv,colorscale:cmap,size:Math.max(3,GS.markerSize-2),opacity:.78,showscale:true,
+        colorbar:{thickness:14,len:.75,title:{text:dn(zc),side:'right'},tickfont:{size:GS.fontSize}}}}];
   }
-  const L={title:{text:`${dn(zc)} vs ${dn(xc)} / ${dn(yc)}`,font:{size:13,color:'#1a1a1a'},x:.5,xanchor:'center'},
-    width:Math.round(1000*SC), height:Math.round(800*SC),
-    paper_bgcolor:'white',font:{family:'system-ui,sans-serif',size:11},
+  const L={title:{text:`${dn(zc)} vs ${dn(xc)} / ${dn(yc)}`,font:{size:GS.titleSize,color:'#111'},x:.5,xanchor:'center'},
+    width:Math.round(1000*GS.sc), height:Math.round(800*GS.sc),
+    paper_bgcolor:'white',font:{family:GS.fontFamily,size:GS.fontSize},
     scene:{xaxis:{title:dn(xc),showgrid:false,showline:true,linecolor:'#333',ticks:'outside',ticklen:4},
            yaxis:{title:dn(yc),showgrid:false,showline:true,linecolor:'#333',ticks:'outside',ticklen:4},
            zaxis:{title:dn(zc),showgrid:false,showline:true,linecolor:'#333',ticks:'outside',ticklen:4},
@@ -1157,24 +1282,24 @@ function chartCorr(data){
   } else {
     cl.innerHTML=''; cl.style.display='none';
   }
-  // Square cells: cap at 600px plot area so it fits the panel
-  const maxPlot=600;
-  const cellPx=Math.min(56, Math.floor(maxPlot/n));
+  // Square cells: scale with GS.sc slider
+  const maxPlot=Math.round(600*GS.sc);
+  const cellPx=Math.min(Math.round(56*GS.sc), Math.floor(maxPlot/n));
   const plotArea=n*cellPx;
-  const mL=90, mT=55, mB=110, mR=90+70; // colorbar only, no label margin
+  const mL=Math.round(90*GS.sc), mT=Math.round(55*GS.sc), mB=Math.round(110*GS.sc), mR=Math.round(160*GS.sc);
   const corrW=plotArea+mL+mR, corrH=plotArea+mT+mB;
   const L={...BL('Correlation Matrix'),
     width:corrW, height:corrH,
-    xaxis:{showgrid:false,zeroline:false,showline:false,side:'bottom',tickangle:-45,tickfont:{size:chartTS()},
+    xaxis:{showgrid:false,zeroline:false,showline:false,side:'bottom',tickangle:-45,tickfont:{size:11},
            scaleanchor:'y',constrain:'domain'},
-    yaxis:{showgrid:false,zeroline:false,showline:false,autorange:'reversed',tickfont:{size:chartTS()},
+    yaxis:{showgrid:false,zeroline:false,showline:false,autorange:'reversed',tickfont:{size:11},
            constrain:'domain'},
     margin:{l:mL,r:mR,t:mT,b:mB}};
   plotChart([{
     type:'heatmap',z,x:labels,y:labels,
     text:showV?txt:undefined,texttemplate:showV?'%{text}':undefined,
-    textfont:{size:Math.max(6,chartTS()-1)},colorscale:resolveCS(cmap),zmin:-1,zmid:0,zmax:1,
-    colorbar:{thickness:16,len:.85,tickfont:{size:chartTS()},x:1.02,xanchor:'left',title:{text:'r',side:'right',font:{size:chartTS()}}},hoverongaps:false,
+    textfont:{size:9},colorscale:resolveCS(cmap),zmin:-1,zmid:0,zmax:1,
+    colorbar:{thickness:16,len:.85,tickfont:{size:10},x:1.02,xanchor:'left',title:{text:'r',side:'right',font:{size:11}}},hoverongaps:false,
   }],L);
 }
 
@@ -1201,15 +1326,15 @@ function chartKDE(data){
       const vals=subset.map(r=>toNum(r[metric])).filter(v=>!isNaN(v));
       if(!vals.length)return;
       traces.push({type:'violin',y:vals,name:cat,legendgroup:cat,showlegend:mi===0,
-        line:{color:cols[ci2],width:2},fillcolor:cols[ci2]+'99',opacity:.7,
-        points:false,box:{visible:false},meanline:{visible:true,color:cols[ci2],width:1.5},
+        line:{color:cols[ci2],width:GS.lineWidth},fillcolor:cols[ci2]+'99',opacity:.7,
+        points:false,box:{visible:false},meanline:{visible:true,color:cols[ci2],width:Math.max(1,GS.lineWidth*.7)},
         xaxis:xi,yaxis:yi});
     });
     annotations.push({
       text:`<b>${dn(metric)}</b>`,
       x:((ci-.5)/ncols),y:1-(ri-1)/nrows,
       xref:'paper',yref:'paper',showarrow:false,
-      font:{size:chartTS(),color:'#1a1a1a'},xanchor:'center',yanchor:'bottom'
+      font:{size:11,color:'#1a1a1a'},xanchor:'center',yanchor:'bottom'
     });
   }
   const L={
@@ -1251,7 +1376,7 @@ function chartSingle(data){
       const ecdf=vals.map((_,i)=>(i+1)/vals.length);
       traces.push({type:'scatter',mode:'lines',name:grp,
         x:isH?ecdf:vals,y:isH?vals:ecdf,
-        line:{color:cols[gi],width:2.2}});
+        line:{color:cols[gi],width:GS.lineWidth}});
     });
   } else if(type==='bar'){
     const labels=[],means=[],stds=[];
@@ -1273,16 +1398,16 @@ function chartSingle(data){
       const subset=gc?data.filter(r=>String(r[gc]??'N/A')===grp):data;
       const vals=subset.map(r=>toNum(r[mc])).filter(v=>!isNaN(v));
       const tr={type:type==='violin'?'violin':'box',name:grp,
-        marker:{color:cols[gi],size:type==='strip'?3:6,opacity:.75,line:{color:'rgba(30,30,30,.4)',width:.4}},
+        marker:{color:cols[gi],size:type==='strip'?Math.max(2,GS.markerSize-3):Math.max(4,GS.markerSize-1),opacity:.75,line:{color:'rgba(30,30,30,.4)',width:.4}},
         line:{color:cols[gi]},fillcolor:cols[gi]+'60'};
       if(isH){tr.x=vals;tr.orientation='h';}else{tr.y=vals;}
       if(type==='strip'){
         tr.type='box';tr.boxpoints='all';tr.jitter=.4;tr.pointpos=0;
         tr.fillcolor='rgba(0,0,0,0)';tr.line={color:'rgba(0,0,0,0)'};
-        tr.marker={color:cols[gi],size:3.5,opacity:.55,line:{color:'rgba(30,30,30,.3)',width:.3}};
+        tr.marker={color:cols[gi],size:Math.max(2.5,GS.markerSize-3),opacity:.55,line:{color:'rgba(30,30,30,.3)',width:.3}};
       } else if(type==='violin'){
         tr.points=false;tr.box={visible:true,width:.3};
-        tr.meanline={visible:true,color:cols[gi],width:1.5};
+        tr.meanline={visible:true,color:cols[gi],width:Math.max(1,GS.lineWidth*.7)};
       }
       traces.push(tr);
     });
@@ -1314,15 +1439,15 @@ function chartLine(data){
       const subset=data.filter(r=>String(r[hc]??'N/A')===cat).sort((a,b)=>toNum(a[xc])-toNum(b[xc]));
       return{type:'scatter',mode,name:cat,
         x:subset.map(r=>toNum(r[xc])),y:subset.map(r=>toNum(r[yc])),
-        line:{color:cols[ci],dash:ls,width:2.2},
-        marker:{symbol:mk,size:7,color:cols[ci],line:{color:'rgba(30,30,30,.4)',width:.5}}};
+        line:{color:cols[ci],dash:ls,width:GS.lineWidth},
+        marker:{symbol:mk,size:GS.markerSize,color:cols[ci],line:{color:'rgba(30,30,30,.4)',width:.5}}};
     });
   } else {
     const sorted=[...data].sort((a,b)=>toNum(a[xc])-toNum(b[xc]));
     traces=[{type:'scatter',mode,
       x:sorted.map(r=>toNum(r[xc])),y:sorted.map(r=>toNum(r[yc])),
-      line:{color:'#1f77b4',dash:ls,width:2.2},
-      marker:{symbol:mk,size:7,color:'#1f77b4',line:{color:'rgba(30,30,30,.4)',width:.5}}}];
+      line:{color:GS.accentColor,dash:ls,width:GS.lineWidth},
+      marker:{symbol:mk,size:GS.markerSize,color:GS.accentColor,line:{color:'rgba(30,30,30,.4)',width:.5}}}];
   }
   const L={...BL(`${dn(yc)} vs ${dn(xc)}`),
     width:Math.round(1200*SC), height:Math.round(600*SC),
@@ -1359,7 +1484,7 @@ function chartParCoords(data){
   plotChart([{type:'parcoords',
     line:{color:lineColor,colorscale:cmap,showscale:!!colorCol,
       colorbar:{thickness:12,len:.7,title:{text:colorCol?dn(colorCol):'',side:'right'},tickfont:{size:10}}},
-    dimensions:dims,labelfont:{size:chartTS()},tickfont:{size:Math.max(6,chartTS()-1)}
+    dimensions:dims,labelfont:{size:11},tickfont:{size:10}
   }],L);
 }
 
